@@ -1,4 +1,4 @@
-const API       = "http://localhost:3000/movielens/api";
+const API = "https://movielens-backend-s49l.onrender.com/movielens/api";
 const TMDB_KEY  = "c862dda96952702fa0e248dc1f1f0937";
 const TMDB_IMG  = "https://image.tmdb.org/t/p/w92";
 const PER_PAGE  = 10;
