@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="el" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieLens App</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <div>
+            <h1>🎬 MovieLens Explorer</h1>
+            <p>Αναζήτηση, βαθμολόγηση και προτάσεις ταινιών</p>
+        </div>
+        <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+    </div>
+</header>
+
+<main>
+
+    <!-- ─── SECTION 1: Αναζήτηση ταινιών ─── -->
+    <section id="section-search">
+        <h2>Αναζήτηση Ταινιών</h2>
+        <div class="input-row">
+            <input type="text" id="search-input" placeholder="π.χ. Toy Story, Matrix...">
+            <input type="number" id="year-from" placeholder="Από έτος (π.χ. 2000)" min="1900" max="2025">
+            <input type="number" id="year-to"   placeholder="Έως έτος (π.χ. 2020)" min="1900" max="2025">
+            <button onclick="searchMovies()">Αναζήτηση</button>
+        </div>
+        <div id="search-error" class="error-msg"></div>
+
+        <!-- Sorting controls -->
+        <div id="sort-controls" class="hidden input-row" style="margin-top:10px;">
+            <label style="align-self:center; font-size:0.9rem;">Ταξινόμηση:</label>
+            <select id="sort-field">
+                <option value="title">Τίτλος</option>
+                <option value="year">Έτος</option>
+                <option value="avg">Βαθμολογία</option>
+            </select>
+            <select id="sort-dir">
+                <option value="asc">Αύξουσα ↑</option>
+                <option value="desc">Φθίνουσα ↓</option>
+            </select>
+            <button onclick="applySortAndRender()">Εφαρμογή</button>
+        </div>
+
+        <table id="search-results" class="hidden">
+            <thead>
+                <tr>
+                    <th>Τίτλος</th>
+                    <th>Είδος</th>
+                    <th>Έτος</th>
+                    <th>Μέση Βαθμολογία</th>
+                    <th>Ενέργειες</th>
+                </tr>
+            </thead>
+            <tbody id="search-results-body"></tbody>
+        </table>
+
+        <!-- Pagination controls -->
+        <div id="pagination-controls" class="hidden pagination-row">
+            <button onclick="changePage(-1)">← Προηγούμενη</button>
+            <span id="page-info"></span>
+            <button onclick="changePage(1)">Επόμενη →</button>
+        </div>
+    </section>
+
+    <!-- ─── SECTION 2: Προσθήκη ταινίας ─── -->
+    <section id="section-add">
+        <h2>Προσθήκη Νέας Ταινίας</h2>
+        <div class="input-row">
+            <input type="text" id="add-title"  placeholder="Τίτλος ταινίας">
+            <input type="text" id="add-genres" placeholder="π.χ. Action|Drama|Comedy">
+            <button onclick="addMovie()">Προσθήκη</button>
+        </div>
+        <div id="add-feedback" class="feedback-msg"></div>
+    </section>
+
+    <!-- ─── SECTION 3: Συστάσεις ─── -->
+    <section id="section-recs">
+        <h2>Προτάσεις Ταινιών</h2>
+        <p class="hint">Βαθμολόγησε τουλάχιστον 2 ταινίες από την αναζήτηση και μετά πάτα το κουμπί.</p>
+
+        <div class="imdb-import">
+    <p class="hint">Έχεις λογαριασμό IMDb; Εισήγαγε τις αξιολογήσεις σου αυτόματα!</p>
+    <div class="input-row">
+        <input type="file" id="imdb-file" accept=".csv">
+        <button onclick="importIMDb()">Εισαγωγή από IMDb</button>
+        <button id="toggle-imdb-btn" class="toggle-imdb-btn hidden" onclick="toggleIMDbRatings()">
+            🙈 Απόκρυψη IMDb
+        </button>
+    </div>
+    <div id="imdb-feedback" class="feedback-msg"></div>
+</div>
+
+        <div id="my-ratings-list"></div>
+
+        <div class="input-row" style="margin-bottom: 12px;">
+            <select id="rec-genre">
+                <option value="">Όλα τα genres</option>
+                <option value="Action">Action</option>
+                <option value="Adventure">Adventure</option>
+                <option value="Animation">Animation</option>
+                <option value="Comedy">Comedy</option>
+                <option value="Crime">Crime</option>
+                <option value="Documentary">Documentary</option>
+                <option value="Drama">Drama</option>
+                <option value="Fantasy">Fantasy</option>
+                <option value="Horror">Horror</option>
+                <option value="Mystery">Mystery</option>
+                <option value="Romance">Romance</option>
+                <option value="Sci-Fi">Sci-Fi</option>
+                <option value="Thriller">Thriller</option>
+            </select>
+            <select id="rec-n">
+                <option value="5">5 προτάσεις</option>
+                <option value="10" selected>10 προτάσεις</option>
+                <option value="20">20 προτάσεις</option>
+                <option value="50">50 προτάσεις</option>
+            </select>
+            <input type="number" id="rec-year-from" placeholder="Από έτος" min="1900" max="2025">
+            <input type="number" id="rec-year-to"   placeholder="Έως έτος"  min="1900" max="2025">
+            <button onclick="getRecommendations()">Λήψη Προτάσεων</button>
+        </div>
+
+        <div id="rec-error" class="error-msg"></div>
+        <table id="rec-results" class="hidden">
+            <thead>
+                <tr>
+                    <th>Τίτλος</th>
+                    <th>Είδος</th>
+                    <th>Έτος</th>
+                    <th>Προβλεπόμενη Βαθμολογία</th>
+                    <th>Ενέργειες</th>
+                </tr>
+            </thead>
+            <tbody id="rec-results-body"></tbody>
+        </table>
+    </section>
+
+    <!-- ─── SECTION 4: Watchlist ─── -->
+    <section id="section-watchlist">
+        <h2>📋 Watchlist</h2>
+        <div class="input-row" style="margin-bottom:12px;">
+            <button onclick="exportWatchlist()">⬇️ Export σε CSV</button>
+            <button class="remove-btn" onclick="clearWatchlist()">🗑️ Καθαρισμός Watchlist</button>
+        </div>
+        <p class="hint">Ταινίες που θέλεις να δεις αργότερα.</p>
+        <div id="watchlist-empty" class="hint">Δεν έχεις προσθέσει ακόμα ταινίες στη λίστα σου.</div>
+        <table id="watchlist-table" class="hidden">
+            <thead>
+                <tr>
+                    <th>Τίτλος</th>
+                    <th>Είδος</th>
+                    <th>Trailer</th>
+                    <th>Αφαίρεση</th>
+                </tr>
+            </thead>
+            <tbody id="watchlist-body"></tbody>
+        </table>
+    </section>
+
+
+<!-- ─── SECTION 5: Στατιστικά ─── -->
+    <section id="section-stats">
+        <h2>📊 Τα Στατιστικά μου</h2>
+        <p class="hint">Βασισμένα στις βαθμολογίες που έχεις εισάγει.</p>
+        <button onclick="showStats()">Ανανέωση Στατιστικών</button>
+        <div id="stats-content" style="margin-top:16px;"></div>
+    </section>
+
+</main>
+
+<script src="index.js"></script>
+</body>
+</html>
