@@ -103,7 +103,9 @@ class RecommendationRequest(BaseModel):
 def get_recommendations(request: RecommendationRequest):
     # Οι ταινίες που έχει βαθμολογήσει ο χρήστης u
     user_ratings = {r.movieId: r.rating for r in request.ratings}
-    rated_movies = set(user_ratings.keys())
+    # Περιορίζουμε στις 50 πιο υψηλά βαθμολογημένες για ταχύτητα
+    top_rated    = sorted(user_ratings.items(), key=lambda x: x[1], reverse=True)[:50]
+    rated_movies = set(dict(top_rated).keys())
 
     conn = get_conn()
     cursor = conn.cursor()
@@ -119,7 +121,7 @@ def get_recommendations(request: RecommendationRequest):
 
     # Για κάθε υποψήφιο χρήστη v, φορτώνουμε τις βαθμολογίες του
     # και υπολογίζουμε Pearson correlation με τον χρήστη u
-    K = 20  # αριθμός κοντινότερων γειτόνων
+    K = 10  # αριθμός κοντινότερων γειτόνων
     similarities = {}
 
     for v in candidate_users:

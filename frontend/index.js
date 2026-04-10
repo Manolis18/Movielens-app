@@ -492,15 +492,19 @@ async function getRecommendations() {
     const n           = parseInt(document.getElementById("rec-n").value);
     const recYearFrom = parseInt(document.getElementById("rec-year-from").value) || null;
     const recYearTo   = parseInt(document.getElementById("rec-year-to").value)   || null;
+    const btn         = document.getElementById("rec-btn");
 
-    errorDiv.textContent = "";
+    errorDiv.textContent  = "";
+    btn.textContent       = "⏳ Υπολογισμός...";
+    btn.disabled          = true;
 
-    // Χρησιμοποιούμε μόνο τα ενεργά ratings
     const active  = getActiveRatings();
     const entries = Object.entries(active);
 
     if (entries.length < 2) {
         errorDiv.textContent = "Χρειάζονται τουλάχιστον 2 ενεργές βαθμολογίες για προτάσεις.";
+        btn.textContent = "Λήψη Προτάσεων";
+        btn.disabled    = false;
         return;
     }
 
@@ -539,6 +543,8 @@ async function getRecommendations() {
         if (recs.length === 0) {
             errorDiv.textContent = "Δεν βρέθηκαν προτάσεις με αυτά τα κριτήρια.";
             table.classList.add("hidden");
+            btn.textContent = "Λήψη Προτάσεων";
+            btn.disabled    = false;
             return;
         }
 
@@ -579,8 +585,10 @@ async function getRecommendations() {
 
     } catch (err) {
         errorDiv.textContent = "Σφάλμα σύνδεσης με τον server.";
+    } finally {
+        btn.textContent = "Λήψη Προτάσεων";
+        btn.disabled    = false;
     }
-}
 
 // ─────────────────────────────────────────
 // ΣΤΑΤΙΣΤΙΚΑ ΧΡΗΣΤΗ
@@ -672,7 +680,7 @@ function showStats() {
             <div style="margin-top:10px;">${distHTML || "<p class='hint'>Καμία ενεργή βαθμολογία.</p>"}</div>
         </div>
     `;
-}
+}}
 
 // ─────────────────────────────────────────
 // ΕΙΣΑΓΩΓΗ ΑΠΟ IMDB
