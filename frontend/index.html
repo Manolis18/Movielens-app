@@ -95,7 +95,13 @@
     <div id="imdb-feedback" class="feedback-msg"></div>
 </div>
 
-        <div id="my-ratings-list"></div>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+    <strong id="ratings-label">Οι βαθμολογίες σου:</strong>
+    <button id="toggle-ratings-btn" onclick="toggleRatingsList()" style="padding:4px 12px; font-size:0.85rem;">
+        🔼 Απόκρυψη
+    </button>
+</div>
+<div id="my-ratings-list"></div>
 
         <div class="input-row" style="margin-bottom: 12px;">
             <select id="rec-genre">

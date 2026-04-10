@@ -355,6 +355,19 @@ function updateRatingsList() {
     div.innerHTML = html;
 }
 
+function toggleRatingsList() {
+    const list = document.getElementById("my-ratings-list");
+    const btn  = document.getElementById("toggle-ratings-btn");
+
+    if (list.style.display === "none") {
+        list.style.display = "";
+        btn.textContent    = "🔼 Απόκρυψη";
+    } else {
+        list.style.display = "none";
+        btn.textContent    = "🔽 Εμφάνιση";
+    }
+}
+
 // ─────────────────────────────────────────
 // WATCHLIST
 // ─────────────────────────────────────────
