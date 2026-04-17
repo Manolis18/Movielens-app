@@ -1,4 +1,4 @@
-/* ── CSS Variables για Light/Dark mode ── */
+/* ── CSS Variables ── */
 :root {
     --bg:         #f4f6f9;
     --surface:    #ffffff;
@@ -15,6 +15,7 @@
 }
 
 [data-theme="dark"] {
+    color-scheme: dark;
     --bg:         #0f0f1a;
     --surface:    #1e1e2e;
     --primary:    #7c83fd;
@@ -29,7 +30,7 @@
     --shadow:     rgba(0,0,0,0.3);
 }
 
-/* ── Γενικά ── */
+/* ── Reset ── */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -58,15 +59,8 @@ header {
     margin: 0 auto;
 }
 
-header h1 {
-    font-size: 1.8rem;
-    margin-bottom: 4px;
-}
-
-header p {
-    font-size: 0.95rem;
-    opacity: 0.8;
-}
+header h1 { font-size: 1.8rem; margin-bottom: 4px; }
+header p  { font-size: 0.95rem; opacity: 0.8; }
 
 #theme-toggle {
     background: transparent;
@@ -80,9 +74,7 @@ header p {
     white-space: nowrap;
 }
 
-#theme-toggle:hover {
-    background: rgba(255,255,255,0.15);
-}
+#theme-toggle:hover { background: rgba(255,255,255,0.15); }
 
 /* ── Main layout ── */
 main {
@@ -144,6 +136,8 @@ input[type="number"]:focus {
     border-color: var(--primary);
 }
 
+[data-theme="dark"] input::placeholder { color: #777799; }
+
 button {
     padding: 10px 20px;
     background: var(--primary);
@@ -155,14 +149,8 @@ button {
     transition: background 0.2s, transform 0.1s;
 }
 
-button:hover {
-    background: var(--primary-hv);
-    transform: translateY(-1px);
-}
-
-button:active {
-    transform: translateY(0);
-}
+button:hover  { background: var(--primary-hv); transform: translateY(-1px); }
+button:active { transform: translateY(0); }
 
 /* ── Πίνακες ── */
 table {
@@ -186,9 +174,7 @@ td {
     color: var(--text);
 }
 
-tr:hover td {
-    background: var(--row-hover);
-}
+tr:hover td { background: var(--row-hover); }
 
 /* ── Select ── */
 select {
@@ -214,10 +200,7 @@ select {
     transition: background 0.2s, transform 0.1s;
 }
 
-.trailer-link:hover {
-    background: #cc0000;
-    transform: translateY(-1px);
-}
+.trailer-link:hover { background: #cc0000; transform: translateY(-1px); }
 
 /* ── Watchlist button ── */
 .watchlist-btn {
@@ -231,9 +214,7 @@ select {
     transition: background 0.2s;
 }
 
-.watchlist-btn:hover {
-    background: #1e8449;
-}
+.watchlist-btn:hover { background: #1e8449; }
 
 .remove-btn {
     padding: 5px 12px;
@@ -246,9 +227,7 @@ select {
     transition: background 0.2s;
 }
 
-.remove-btn:hover {
-    background: #c0392b;
-}
+.remove-btn:hover { background: #c0392b; }
 
 /* ── Rating select ── */
 .rating-select {
@@ -268,16 +247,10 @@ select {
     min-height: 20px;
 }
 
-.feedback-msg {
-    font-size: 0.95rem;
-    margin-top: 8px;
-    min-height: 20px;
-}
-
+.feedback-msg         { font-size: 0.95rem; margin-top: 8px; min-height: 20px; }
 .feedback-msg.success { color: #27ae60; }
 .feedback-msg.error   { color: #e74c3c; }
 
-/* ── Hint ── */
 .hint {
     font-size: 0.9rem;
     color: var(--text-muted);
@@ -285,10 +258,7 @@ select {
 }
 
 /* ── Βαθμολογίες χρήστη ── */
-#my-ratings-list {
-    margin-bottom: 14px;
-    font-size: 0.95rem;
-}
+#my-ratings-list { margin-bottom: 14px; font-size: 0.95rem; }
 
 #my-ratings-list span {
     display: inline-block;
@@ -301,11 +271,8 @@ select {
 }
 
 /* ── Utility ── */
-.hidden {
-    display: none;
-}
+.hidden { display: none; }
 
-/* ── File input ── */
 input[type="file"] {
     padding: 8px;
     border: 1px solid var(--border);
@@ -314,6 +281,7 @@ input[type="file"] {
     color: var(--text);
     cursor: pointer;
 }
+
 /* ── Pagination ── */
 .pagination-row {
     display: flex;
@@ -323,11 +291,9 @@ input[type="file"] {
     margin-top: 14px;
 }
 
-#page-info {
-    font-size: 0.95rem;
-    color: var(--text-muted);
-}
-/* ── Αφίσες ταινιών ── */
+#page-info { font-size: 0.95rem; color: var(--text-muted); }
+
+/* ── Αφίσες ── */
 .movie-poster {
     width: 45px;
     height: 65px;
@@ -376,20 +342,6 @@ input[type="file"] {
     margin-top: 4px;
 }
 
-.genres-list {
-    margin-top: 12px;
-}
-
-.genres-list span {
-    display: inline-block;
-    background: var(--tag-bg);
-    color: var(--text);
-    border-radius: 5px;
-    padding: 4px 10px;
-    margin: 3px;
-    font-size: 0.85rem;
-}
-
 /* ── Toggle IMDb button ── */
 .toggle-imdb-btn {
     padding: 10px 20px;
@@ -402,10 +354,148 @@ input[type="file"] {
     transition: background 0.2s;
 }
 
-.toggle-imdb-btn:hover {
-    background: #ca6f1e;
+.toggle-imdb-btn:hover        { background: #ca6f1e; }
+.toggle-imdb-btn.active       { background: #27ae60; }
+.toggle-imdb-btn.active:hover { background: #1e8449; }
+
+/* ═══════════════════════════════════════
+   🆕 SKELETON LOADING
+═══════════════════════════════════════ */
+.skeleton {
+    background: linear-gradient(90deg, var(--border) 25%, var(--row-hover) 50%, var(--border) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
 }
 
-.toggle-imdb-btn.active {
-    background: #27ae60;
+@keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-row td { padding: 12px 14px; }
+
+.skeleton-poster {
+    display: block;
+    width: 45px;
+    height: 65px;
+    border-radius: 4px;
+}
+
+.skeleton-text-long  { display: block; height: 14px; width: 80%; }
+.skeleton-text-short { display: block; height: 14px; width: 50%; }
+.skeleton-text-tiny  { display: block; height: 14px; width: 30%; }
+
+/* ═══════════════════════════════════════
+   🆕 TOAST NOTIFICATIONS
+═══════════════════════════════════════ */
+#toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 9999;
+}
+
+.toast {
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    animation: slideIn 0.3s ease, fadeOut 0.4s ease 2.6s forwards;
+    max-width: 300px;
+    word-wrap: break-word;
+}
+
+.toast.success { background: #27ae60; }
+.toast.error   { background: #e74c3c; }
+.toast.info    { background: #2980b9; }
+
+@keyframes slideIn {
+    from { transform: translateX(120%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to   { opacity: 0; transform: translateY(10px); }
+}
+
+/* ═══════════════════════════════════════
+   🆕 RESPONSIVE DESIGN
+═══════════════════════════════════════ */
+@media (max-width: 768px) {
+    header { padding: 16px 20px; }
+
+    .header-content {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+
+    header h1 { font-size: 1.4rem; }
+
+    main { margin: 16px auto; padding: 0 12px; gap: 16px; }
+
+    section { padding: 16px; }
+
+    .input-row {
+        flex-direction: column;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    button {
+        width: 100%;
+    }
+
+    /* Κρύβουμε κάποιες στήλες στα μικρά table */
+    table { font-size: 0.85rem; }
+
+    #search-results th:nth-child(4),
+    #search-results td:nth-child(4),
+    #rec-results th:nth-child(4),
+    #rec-results td:nth-child(4) { display: none; } /* Κρύβουμε στήλη Έτους */
+
+    .movie-poster {
+        width: 35px;
+        height: 50px;
+    }
+
+    .trailer-link,
+    .watchlist-btn,
+    .remove-btn {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    #toast-container {
+        bottom: 16px;
+        right: 16px;
+        left: 16px;
+    }
+
+    .toast { max-width: 100%; }
+
+    .pagination-row { gap: 8px; }
+    .pagination-row button { padding: 8px 12px; font-size: 0.9rem; }
+}
+
+@media (max-width: 480px) {
+    header h1 { font-size: 1.2rem; }
+
+    #search-results th:nth-child(3),
+    #search-results td:nth-child(3),
+    #rec-results th:nth-child(3),
+    #rec-results td:nth-child(3) { display: none; } /* Κρύβουμε και το Είδος */
+
+    .stats-grid { grid-template-columns: 1fr 1fr; }
 }

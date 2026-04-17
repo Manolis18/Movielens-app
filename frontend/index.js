@@ -1,17 +1,48 @@
-const API = "https://movielens-backend-s49l.onrender.com/movielens/api";
-// v2.0
-const TMDB_KEY  = "c862dda96952702fa0e248dc1f1f0937";
-const TMDB_IMG  = "https://image.tmdb.org/t/p/w92";
-const PER_PAGE  = 10;
+const API      = "https://movielens-backend-s49l.onrender.com/movielens/api";
+const TMDB_KEY = "c862dda96952702fa0e248dc1f1f0937";
+const TMDB_IMG = "https://image.tmdb.org/t/p/w92";
+const PER_PAGE = 10;
 
 // ─────────────────────────────────────────
-// ΚΑΤΑΣΤΑΣΗ ΕΦΑΡΜΟΓΗΣ
+// ΚΑΤΑΣΤΑΣΗ
 // ─────────────────────────────────────────
-let currentMovies    = [];
-let currentAverages  = {};
-let currentPage      = 1;
-let posterCache      = {};
-let imdbHidden       = false; // κατάσταση απόκρυψης IMDb ratings
+let currentMovies   = [];
+let currentAverages = {};
+let currentPage     = 1;
+let posterCache     = {};
+let imdbHidden      = false;
+
+// ─────────────────────────────────────────
+// TOAST NOTIFICATIONS
+// ─────────────────────────────────────────
+function showToast(message, type = "info") {
+    const container = document.getElementById("toast-container");
+    const toast     = document.createElement("div");
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// ─────────────────────────────────────────
+// SKELETON LOADING
+// ─────────────────────────────────────────
+function showSkeleton(tbodyId, cols = 6, rows = 5) {
+    const tbody = document.getElementById(tbodyId);
+    tbody.innerHTML = "";
+    for (let i = 0; i < rows; i++) {
+        const tr = document.createElement("tr");
+        tr.className = "skeleton-row";
+        for (let j = 0; j < cols; j++) {
+            const td  = document.createElement("td");
+            const div = document.createElement("div");
+            div.className = `skeleton ${j === 0 ? "skeleton-poster" : j === 1 ? "skeleton-text-long" : j === 2 ? "skeleton-text-short" : "skeleton-text-tiny"}`;
+            td.appendChild(div);
+            tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+    }
+}
 
 // ─────────────────────────────────────────
 // ΑΠΟΘΗΚΕΥΣΗ SESSION
@@ -81,11 +112,9 @@ function cleanTitle(title) {
 }
 
 function trailerLink(title) {
-    const query = encodeURIComponent(title + " trailer");
-    return `https://www.youtube.com/results?search_query=${query}`;
+    return `https://www.youtube.com/results?search_query=${encodeURIComponent(title + " trailer")}`;
 }
 
-// Επιστρέφει μόνο τα ενεργά ratings (εξαιρεί IMDb αν είναι κρυμμένα)
 function getActiveRatings() {
     if (!imdbHidden) return myRatings;
     const active = {};
@@ -96,12 +125,11 @@ function getActiveRatings() {
 }
 
 // ─────────────────────────────────────────
-// TOGGLE IMDB RATINGS
+// TOGGLE IMDB
 // ─────────────────────────────────────────
 function toggleIMDbRatings() {
     imdbHidden = !imdbHidden;
     const btn  = document.getElementById("toggle-imdb-btn");
-
     if (imdbHidden) {
         btn.textContent = "👁️ Εμφάνιση IMDb";
         btn.classList.add("active");
@@ -109,34 +137,43 @@ function toggleIMDbRatings() {
         btn.textContent = "🙈 Απόκρυψη IMDb";
         btn.classList.remove("active");
     }
-
     updateRatingsList();
     showStats();
 }
 
 // ─────────────────────────────────────────
-// TMDB — Λήψη αφίσας
+// TOGGLE RATINGS LIST
+// ─────────────────────────────────────────
+function toggleRatingsList() {
+    const list = document.getElementById("my-ratings-list");
+    const btn  = document.getElementById("toggle-ratings-btn");
+    if (list.style.display === "none") {
+        list.style.display = "";
+        btn.textContent    = "🔼 Απόκρυψη";
+    } else {
+        list.style.display = "none";
+        btn.textContent    = "🔽 Εμφάνιση";
+    }
+}
+
+// ─────────────────────────────────────────
+// TMDB
 // ─────────────────────────────────────────
 async function fetchPoster(title, year) {
     const key = `${title}_${year}`;
     if (posterCache[key] !== undefined) return posterCache[key];
-
     try {
-        const query     = encodeURIComponent(cleanTitle(title));
-        const yearParam = year ? `&year=${year}` : "";
-        const url       = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${query}${yearParam}&language=en-US`;
-        const res       = await fetch(url);
-        const data      = await res.json();
-
-        if (data.results && data.results.length > 0 && data.results[0].poster_path) {
+        const query = encodeURIComponent(cleanTitle(title));
+        const yearP = year ? `&year=${year}` : "";
+        const url   = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${query}${yearP}&language=en-US`;
+        const res   = await fetch(url);
+        const data  = await res.json();
+        if (data.results?.length > 0 && data.results[0].poster_path) {
             const path = TMDB_IMG + data.results[0].poster_path;
             posterCache[key] = path;
             return path;
         }
-    } catch {
-        // αν αποτύχει επιστρέφουμε null
-    }
-
+    } catch { }
     posterCache[key] = null;
     return null;
 }
@@ -144,9 +181,7 @@ async function fetchPoster(title, year) {
 async function posterHTML(title) {
     const year = extractYear(title);
     const src  = await fetchPoster(title, year);
-    if (src) {
-        return `<img class="movie-poster" src="${src}" alt="Αφίσα" loading="lazy">`;
-    }
+    if (src) return `<img class="movie-poster" src="${src}" alt="Αφίσα" loading="lazy">`;
     return `<div class="no-poster">🎬</div>`;
 }
 
@@ -156,7 +191,6 @@ async function posterHTML(title) {
 function applySortAndRender() {
     const field = document.getElementById("sort-field").value;
     const dir   = document.getElementById("sort-dir").value;
-
     currentMovies.sort((a, b) => {
         let valA, valB;
         if (field === "title") {
@@ -165,7 +199,7 @@ function applySortAndRender() {
         } else if (field === "year") {
             valA = extractYear(a.title) || 0;
             valB = extractYear(b.title) || 0;
-        } else if (field === "avg") {
+        } else {
             valA = currentAverages[a.movieId]?.avg || 0;
             valB = currentAverages[b.movieId]?.avg || 0;
         }
@@ -173,7 +207,6 @@ function applySortAndRender() {
         if (valA > valB) return dir === "asc" ?  1 : -1;
         return 0;
     });
-
     currentPage = 1;
     renderPage();
 }
@@ -182,8 +215,8 @@ function applySortAndRender() {
 // PAGINATION + RENDER
 // ─────────────────────────────────────────
 function changePage(delta) {
-    const totalPages = Math.ceil(currentMovies.length / PER_PAGE);
-    currentPage = Math.max(1, Math.min(currentPage + delta, totalPages));
+    const total = Math.ceil(currentMovies.length / PER_PAGE);
+    currentPage = Math.max(1, Math.min(currentPage + delta, total));
     renderPage();
 }
 
@@ -192,20 +225,21 @@ async function renderPage() {
     const table      = document.getElementById("search-results");
     const pagination = document.getElementById("pagination-controls");
     const pageInfo   = document.getElementById("page-info");
-
-    const totalPages = Math.ceil(currentMovies.length / PER_PAGE);
+    const total      = Math.ceil(currentMovies.length / PER_PAGE);
     const start      = (currentPage - 1) * PER_PAGE;
     const pageMovies = currentMovies.slice(start, start + PER_PAGE);
 
-    tbody.innerHTML = "";
+    // Skeleton loading
+    table.classList.remove("hidden");
+    showSkeleton("search-results-body", 6, pageMovies.length);
 
+    tbody.innerHTML = "";
     for (const movie of pageMovies) {
         const info   = currentAverages[movie.movieId];
         const avg    = info ? `${info.avg} ★ (${info.count} ψήφοι)` : "—";
         const year   = extractYear(movie.title) || "—";
         const poster = await posterHTML(movie.title);
-
-        const tr = document.createElement("tr");
+        const tr     = document.createElement("tr");
         tr.innerHTML = `
             <td>${poster}</td>
             <td>${movie.title}</td>
@@ -223,9 +257,7 @@ async function renderPage() {
                     <button onclick="rateMovie(${movie.movieId}, '${movie.title.replace(/'/g, "\\'")}')">
                         Αποθήκευση
                     </button>
-                    <a class="trailer-link" href="${trailerLink(movie.title)}" target="_blank">
-                        ▶ Trailer
-                    </a>
+                    <a class="trailer-link" href="${trailerLink(movie.title)}" target="_blank">▶ Trailer</a>
                     <button class="watchlist-btn" onclick="addToWatchlist(${movie.movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.genres.replace(/'/g, "\\'")}')">
                         + Watchlist
                     </button>
@@ -235,21 +267,12 @@ async function renderPage() {
         tbody.appendChild(tr);
     }
 
-    // Στήλη αφίσας στο header
-    const thead = document.querySelector("#search-results thead tr");
-    if (thead && thead.children[0].textContent !== "Αφίσα") {
-        const th = document.createElement("th");
-        th.textContent = "Αφίσα";
-        thead.insertBefore(th, thead.children[0]);
-    }
-
-    table.classList.remove("hidden");
-    pageInfo.textContent = `Σελίδα ${currentPage} από ${totalPages} (${currentMovies.length} ταινίες)`;
+    pageInfo.textContent = `Σελίδα ${currentPage} από ${total} (${currentMovies.length} ταινίες)`;
     pagination.classList.remove("hidden");
 }
 
 // ─────────────────────────────────────────
-// ΑΝΑΖΗΤΗΣΗ ΤΑΙΝΙΩΝ
+// ΑΝΑΖΗΤΗΣΗ
 // ─────────────────────────────────────────
 async function searchMovies() {
     const keyword  = document.getElementById("search-input").value.trim();
@@ -261,7 +284,7 @@ async function searchMovies() {
     errorDiv.textContent = "";
 
     if (!keyword) {
-        errorDiv.textContent = "Παρακαλώ εισάγετε μια λέξη-κλειδί για αναζήτηση.";
+        showToast("Παρακαλώ εισάγετε λέξη-κλειδί!", "error");
         return;
     }
 
@@ -270,7 +293,6 @@ async function searchMovies() {
         const data = await res.json();
 
         let movies = data.movies;
-
         if (yearFrom || yearTo) {
             movies = movies.filter(m => {
                 const y = extractYear(m.title);
@@ -282,7 +304,7 @@ async function searchMovies() {
         }
 
         if (movies.length === 0) {
-            errorDiv.textContent = "Δεν βρέθηκαν ταινίες με αυτά τα κριτήρια.";
+            showToast("Δεν βρέθηκαν ταινίες!", "error");
             document.getElementById("search-results").classList.add("hidden");
             document.getElementById("pagination-controls").classList.add("hidden");
             sortCtrl.classList.add("hidden");
@@ -302,10 +324,11 @@ async function searchMovies() {
         currentPage     = 1;
 
         sortCtrl.classList.remove("hidden");
+        showToast(`Βρέθηκαν ${movies.length} ταινίες!`, "success");
         renderPage();
 
     } catch (err) {
-        errorDiv.textContent = "Σφάλμα σύνδεσης με τον server.";
+        showToast("Σφάλμα σύνδεσης με τον server!", "error");
     }
 }
 
@@ -315,24 +338,20 @@ async function searchMovies() {
 function rateMovie(movieId, title) {
     const select = document.getElementById(`rating-${movieId}`);
     const rating = parseFloat(select.value);
-
     if (!rating) {
-        alert("Παρακαλώ επίλεξε βαθμολογία πρώτα.");
+        showToast("Παρακαλώ επίλεξε βαθμολογία πρώτα!", "error");
         return;
     }
-
-    // Χειροκίνητη βαθμολογία — fromIMDb: false
     myRatings[movieId] = { title, rating, fromIMDb: false };
     saveToStorage();
     updateRatingsList();
-    alert(`Αποθηκεύτηκε: "${title}" → ${rating} ★`);
+    showToast(`"${title}" → ${rating} ★`, "success");
 }
 
 function updateRatingsList() {
     const div     = document.getElementById("my-ratings-list");
     const active  = getActiveRatings();
     const entries = Object.entries(active);
-
     const total   = Object.keys(myRatings).length;
     const hidden  = total - entries.length;
 
@@ -342,31 +361,15 @@ function updateRatingsList() {
     }
 
     let html = "<strong>Οι βαθμολογίες σου:</strong>";
-    if (hidden > 0) {
-        html += ` <span style="color:var(--text-muted); font-size:0.85rem;">(${hidden} IMDb κρυμμένες)</span>`;
-    }
+    if (hidden > 0) html += ` <span style="color:var(--text-muted); font-size:0.85rem;">(${hidden} IMDb κρυμμένες)</span>`;
     html += "<br>";
 
     if (entries.length === 0) {
-        html += "<span style='color:var(--text-muted); font-size:0.9rem;'>Όλες οι βαθμολογίες είναι κρυμμένες.</span>";
+        html += "<span style='color:var(--text-muted);'>Όλες κρυμμένες.</span>";
     } else {
         html += entries.map(([, v]) => `<span>${v.title}: ${v.rating} ★</span>`).join("");
     }
-
     div.innerHTML = html;
-}
-
-function toggleRatingsList() {
-    const list = document.getElementById("my-ratings-list");
-    const btn  = document.getElementById("toggle-ratings-btn");
-
-    if (list.style.display === "none") {
-        list.style.display = "";
-        btn.textContent    = "🔼 Απόκρυψη";
-    } else {
-        list.style.display = "none";
-        btn.textContent    = "🔽 Εμφάνιση";
-    }
 }
 
 // ─────────────────────────────────────────
@@ -374,19 +377,20 @@ function toggleRatingsList() {
 // ─────────────────────────────────────────
 function addToWatchlist(movieId, title, genres) {
     if (myWatchlist[movieId]) {
-        alert(`"${title}" υπάρχει ήδη στη Watchlist σου!`);
+        showToast(`"${title}" υπάρχει ήδη στη Watchlist!`, "error");
         return;
     }
     myWatchlist[movieId] = { title, genres };
     saveToStorage();
     updateWatchlist();
-    alert(`Προστέθηκε στη Watchlist: "${title}"`);
+    showToast(`Προστέθηκε: "${title}"`, "success");
 }
 
 function removeFromWatchlist(movieId) {
     delete myWatchlist[movieId];
     saveToStorage();
     updateWatchlist();
+    showToast("Αφαιρέθηκε από τη Watchlist", "info");
 }
 
 function clearWatchlist() {
@@ -394,6 +398,7 @@ function clearWatchlist() {
     myWatchlist = {};
     saveToStorage();
     updateWatchlist();
+    showToast("Watchlist καθαρίστηκε!", "info");
 }
 
 function updateWatchlist() {
@@ -417,16 +422,8 @@ function updateWatchlist() {
         tr.innerHTML = `
             <td>${m.title}</td>
             <td>${m.genres}</td>
-            <td>
-                <a class="trailer-link" href="${trailerLink(m.title)}" target="_blank">
-                    ▶ Trailer
-                </a>
-            </td>
-            <td>
-                <button class="remove-btn" onclick="removeFromWatchlist(${movieId})">
-                    Αφαίρεση
-                </button>
-            </td>
+            <td><a class="trailer-link" href="${trailerLink(m.title)}" target="_blank">▶ Trailer</a></td>
+            <td><button class="remove-btn" onclick="removeFromWatchlist(${movieId})">Αφαίρεση</button></td>
         `;
         tbody.appendChild(tr);
     }
@@ -435,24 +432,18 @@ function updateWatchlist() {
 function exportWatchlist() {
     const entries = Object.entries(myWatchlist);
     if (entries.length === 0) {
-        alert("Η Watchlist σου είναι άδεια!");
+        showToast("Η Watchlist είναι άδεια!", "error");
         return;
     }
-
-    const header = "Τίτλος,Είδος,Trailer\n";
-    const rows   = entries.map(([, m]) => {
-        const link = trailerLink(m.title);
-        return `"${m.title}","${m.genres}","${link}"`;
-    }).join("\n");
-
-    const csv  = header + rows;
+    const csv  = "Τίτλος,Είδος,Trailer\n" + entries.map(([, m]) =>
+        `"${m.title}","${m.genres}","${trailerLink(m.title)}"`
+    ).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
-    a.href     = url;
-    a.download = "watchlist.csv";
-    a.click();
+    a.href = url; a.download = "watchlist.csv"; a.click();
     URL.revokeObjectURL(url);
+    showToast("Watchlist εξήχθη επιτυχώς!", "success");
 }
 
 // ─────────────────────────────────────────
@@ -467,8 +458,7 @@ async function addMovie() {
     feedback.className   = "feedback-msg";
 
     if (!title || !genres) {
-        feedback.textContent = "Παρακαλώ συμπλήρωσε τίτλο και είδος.";
-        feedback.classList.add("error");
+        showToast("Παρακαλώ συμπλήρωσε τίτλο και είδος!", "error");
         return;
     }
 
@@ -481,17 +471,14 @@ async function addMovie() {
         const data = await res.json();
 
         if (data.status === "success") {
-            feedback.textContent = `Η ταινία προστέθηκε με ID: ${data.movieId}`;
-            feedback.classList.add("success");
+            showToast(`Ταινία προστέθηκε με ID: ${data.movieId}`, "success");
             document.getElementById("add-title").value  = "";
             document.getElementById("add-genres").value = "";
         } else {
-            feedback.textContent = "Κάτι πήγε στραβά. Δοκίμασε ξανά.";
-            feedback.classList.add("error");
+            showToast("Κάτι πήγε στραβά!", "error");
         }
     } catch (err) {
-        feedback.textContent = "Σφάλμα σύνδεσης με τον server.";
-        feedback.classList.add("error");
+        showToast("Σφάλμα σύνδεσης με τον server!", "error");
     }
 }
 
@@ -508,19 +495,23 @@ async function getRecommendations() {
     const recYearTo   = parseInt(document.getElementById("rec-year-to").value)   || null;
     const btn         = document.getElementById("rec-btn");
 
-    errorDiv.textContent  = "";
-    btn.textContent       = "⏳ Υπολογισμός...";
-    btn.disabled          = true;
+    errorDiv.textContent = "";
+    btn.textContent      = "⏳ Υπολογισμός...";
+    btn.disabled         = true;
 
     const active  = getActiveRatings();
     const entries = Object.entries(active);
 
     if (entries.length < 2) {
-        errorDiv.textContent = "Χρειάζονται τουλάχιστον 2 ενεργές βαθμολογίες για προτάσεις.";
+        showToast("Χρειάζονται τουλάχιστον 2 βαθμολογίες!", "error");
         btn.textContent = "Λήψη Προτάσεων";
         btn.disabled    = false;
         return;
     }
+
+    // Skeleton loading
+    table.classList.remove("hidden");
+    showSkeleton("rec-results-body", 6, 5);
 
     const ratingsPayload = entries.map(([movieId, v]) => ({
         movieId: parseInt(movieId),
@@ -531,6 +522,7 @@ async function getRecommendations() {
         const res  = await fetch(`${API}/recommendations`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            signal: AbortSignal.timeout(120000),
             body: JSON.stringify({
                 ratings:      ratingsPayload,
                 genres:       genre,
@@ -555,7 +547,7 @@ async function getRecommendations() {
         recs = recs.slice(0, n);
 
         if (recs.length === 0) {
-            errorDiv.textContent = "Δεν βρέθηκαν προτάσεις με αυτά τα κριτήρια.";
+            showToast("Δεν βρέθηκαν προτάσεις!", "error");
             table.classList.add("hidden");
             btn.textContent = "Λήψη Προτάσεων";
             btn.disabled    = false;
@@ -563,14 +555,6 @@ async function getRecommendations() {
         }
 
         tbody.innerHTML = "";
-
-        const thead = document.querySelector("#rec-results thead tr");
-        if (thead && thead.children[0].textContent !== "Αφίσα") {
-            const th = document.createElement("th");
-            th.textContent = "Αφίσα";
-            thead.insertBefore(th, thead.children[0]);
-        }
-
         for (const rec of recs) {
             const year   = extractYear(rec.title) || "—";
             const poster = await posterHTML(rec.title);
@@ -583,9 +567,7 @@ async function getRecommendations() {
                 <td>${rec.predictedRating} ★</td>
                 <td>
                     <div style="display:flex; gap:6px;">
-                        <a class="trailer-link" href="${trailerLink(rec.title)}" target="_blank">
-                            ▶ Trailer
-                        </a>
+                        <a class="trailer-link" href="${trailerLink(rec.title)}" target="_blank">▶ Trailer</a>
                         <button class="watchlist-btn" onclick="addToWatchlist(${rec.movieId}, '${rec.title.replace(/'/g, "\\'")}', '${rec.genres.replace(/'/g, "\\'")}')">
                             + Watchlist
                         </button>
@@ -596,9 +578,11 @@ async function getRecommendations() {
         }
 
         table.classList.remove("hidden");
+        showToast(`${recs.length} προτάσεις βρέθηκαν!`, "success");
 
     } catch (err) {
-        errorDiv.textContent = "Σφάλμα σύνδεσης με τον server.";
+        showToast("Σφάλμα σύνδεσης με τον server!", "error");
+        table.classList.add("hidden");
     } finally {
         btn.textContent = "Λήψη Προτάσεων";
         btn.disabled    = false;
@@ -606,7 +590,7 @@ async function getRecommendations() {
 }
 
 // ─────────────────────────────────────────
-// ΣΤΑΤΙΣΤΙΚΑ ΧΡΗΣΤΗ
+// ΣΤΑΤΙΣΤΙΚΑ
 // ─────────────────────────────────────────
 function showStats() {
     const container = document.getElementById("stats-content");
@@ -622,21 +606,16 @@ function showStats() {
     const ratings     = entries.map(([, v]) => v.rating);
     const totalMovies = entries.length;
     const avgRating   = ratings.length > 0
-        ? (ratings.reduce((s, r) => s + r, 0) / ratings.length).toFixed(2)
-        : "—";
+        ? (ratings.reduce((s, r) => s + r, 0) / ratings.length).toFixed(2) : "—";
     const maxRating   = ratings.length > 0 ? Math.max(...ratings) : "—";
     const minRating   = ratings.length > 0 ? Math.min(...ratings) : "—";
     const favorite    = entries.length > 0
-        ? entries.reduce((best, [, v]) => v.rating > best.rating ? v : best, entries[0][1])
-        : null;
-
+        ? entries.reduce((best, [, v]) => v.rating > best.rating ? v : best, entries[0][1]) : null;
     const imdbCount   = Object.values(myRatings).filter(v => v.fromIMDb).length;
     const manualCount = total - imdbCount;
 
     const distribution = {};
-    for (const r of ratings) {
-        distribution[r] = (distribution[r] || 0) + 1;
-    }
+    for (const r of ratings) distribution[r] = (distribution[r] || 0) + 1;
 
     const distHTML = Object.entries(distribution)
         .sort(([a], [b]) => parseFloat(b) - parseFloat(a))
@@ -665,11 +644,11 @@ function showStats() {
             </div>
             <div class="stat-card">
                 <div class="stat-value">${maxRating}★</div>
-                <div class="stat-label">Υψηλότερη Βαθμολογία</div>
+                <div class="stat-label">Υψηλότερη</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value">${minRating}★</div>
-                <div class="stat-label">Χαμηλότερη Βαθμολογία</div>
+                <div class="stat-label">Χαμηλότερη</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value">${imdbCount}</div>
@@ -689,9 +668,8 @@ function showStats() {
                 <div class="stat-label">Αγαπημένη (${favorite.rating}★)</div>
             </div>` : ""}
         </div>
-
         <div style="margin-top:20px;">
-            <strong>Κατανομή Βαθμολογιών${imdbHidden ? " (χωρίς IMDb)" : ""}:</strong>
+            <strong>Κατανομή Βαθμολογιών:</strong>
             <div style="margin-top:10px;">${distHTML || "<p class='hint'>Καμία ενεργή βαθμολογία.</p>"}</div>
         </div>
     `;
@@ -709,14 +687,12 @@ async function importIMDb() {
     feedback.className   = "feedback-msg";
 
     if (!fileInput.files || fileInput.files.length === 0) {
-        feedback.textContent = "Παρακαλώ επίλεξε το CSV αρχείο από το IMDb.";
-        feedback.classList.add("error");
+        showToast("Παρακαλώ επίλεξε αρχείο CSV!", "error");
         return;
     }
 
     const file = fileInput.files[0];
     const text = await file.text();
-
     const lines   = text.split("\n").filter(l => l.trim() !== "");
     const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
 
@@ -724,8 +700,7 @@ async function importIMDb() {
     const ratingIndex = headers.indexOf("Your Rating");
 
     if (titleIndex === -1 || ratingIndex === -1) {
-        feedback.textContent = "Μη έγκυρο αρχείο IMDb CSV.";
-        feedback.classList.add("error");
+        showToast("Μη έγκυρο αρχείο IMDb CSV!", "error");
         return;
     }
 
@@ -735,9 +710,7 @@ async function importIMDb() {
         if (!cols) continue;
         const title  = cols[titleIndex]?.replace(/"/g, "").trim();
         const rating = parseFloat(cols[ratingIndex]);
-        if (title && !isNaN(rating)) {
-            imdbRatings[title] = rating;
-        }
+        if (title && !isNaN(rating)) imdbRatings[title] = rating;
     }
 
     const titles = Object.keys(imdbRatings);
@@ -757,26 +730,20 @@ async function importIMDb() {
             const imdbRating = imdbRatings[match.imdbTitle];
             const converted  = Math.round((imdbRating / 2) * 2) / 2;
             const clamped    = Math.max(0.5, Math.min(5.0, converted));
-            myRatings[match.movieId] = {
-                title:    match.movieTitle,
-                rating:   clamped,
-                fromIMDb: true          // ← σημειώνουμε ότι ήρθε από IMDb
-            };
+            myRatings[match.movieId] = { title: match.movieTitle, rating: clamped, fromIMDb: true };
             loaded++;
         }
 
         saveToStorage();
         updateRatingsList();
         showStats();
-
-        // Εμφανίζουμε το κουμπί απόκρυψης
         toggleBtn.classList.remove("hidden");
-
         feedback.textContent = `Εισήχθησαν ${loaded} ταινίες από τις ${titles.length}.`;
+        showToast(`Εισήχθησαν ${loaded} ταινίες από IMDb!`, "success");
 
     } catch (err) {
-        feedback.textContent = "Σφάλμα σύνδεσης με τον server.";
-        feedback.className   = "feedback-msg error";
+        showToast("Σφάλμα σύνδεσης με τον server!", "error");
+        feedback.className = "feedback-msg error";
     }
 }
 
@@ -788,8 +755,5 @@ updateRatingsList();
 updateWatchlist();
 showStats();
 
-// Αν υπάρχουν ήδη IMDb ratings από προηγούμενη session, εμφάνισε το κουμπί
 const hasIMDb = Object.values(myRatings).some(v => v.fromIMDb);
-if (hasIMDb) {
-    document.getElementById("toggle-imdb-btn").classList.remove("hidden");
-}
+if (hasIMDb) document.getElementById("toggle-imdb-btn").classList.remove("hidden");
