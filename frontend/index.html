@@ -8,7 +8,6 @@
 </head>
 <body>
 
-<!-- Toast container -->
 <div id="toast-container"></div>
 
 <header>
@@ -23,6 +22,15 @@
 
 <main>
 
+    <!-- ─── SECTION 0: Ταινία της ημέρας ─── -->
+    <section id="section-daily">
+        <h2>🎲 Ταινία της Ημέρας</h2>
+        <p class="hint">Μια τυχαία πρόταση για σήμερα!</p>
+        <div id="daily-movie-content">
+            <button onclick="loadDailyMovie()">Ανακάλυψε τη Ταινία της Ημέρας</button>
+        </div>
+    </section>
+
     <!-- ─── SECTION 1: Αναζήτηση ─── -->
     <section id="section-search">
         <h2>Αναζήτηση Ταινιών</h2>
@@ -35,6 +43,16 @@
                    onkeydown="if(event.key==='Enter') searchMovies()">
             <button onclick="searchMovies()">Αναζήτηση</button>
         </div>
+
+        <!-- Ιστορικό αναζητήσεων -->
+        <div id="search-history-container" class="hidden">
+            <div class="history-label">
+                🕐 Πρόσφατες αναζητήσεις:
+                <button class="clear-history-btn" onclick="clearSearchHistory()">Καθαρισμός</button>
+            </div>
+            <div id="search-history-tags"></div>
+        </div>
+
         <div id="search-error" class="error-msg"></div>
 
         <div id="sort-controls" class="hidden input-row" style="margin-top:10px;">
@@ -103,7 +121,7 @@
         </div>
 
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-            <strong id="ratings-label">Οι βαθμολογίες σου:</strong>
+            <strong>Οι βαθμολογίες σου:</strong>
             <button id="toggle-ratings-btn" onclick="toggleRatingsList()" style="padding:4px 12px; font-size:0.85rem;">
                 🔼 Απόκρυψη
             </button>

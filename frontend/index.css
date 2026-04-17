@@ -1,501 +1,141 @@
-/* ── CSS Variables ── */
-:root {
-    --bg:         #f4f6f9;
-    --surface:    #ffffff;
-    --primary:    #1a1a2e;
-    --primary-hv: #2d2d5e;
-    --text:       #333333;
-    --text-muted: #666666;
-    --border:     #e0e0e0;
-    --row-hover:  #f0f4ff;
-    --th-bg:      #1a1a2e;
-    --th-color:   #ffffff;
-    --tag-bg:     #e8f0fe;
-    --shadow:     rgba(0,0,0,0.08);
-}
-
-[data-theme="dark"] {
-    color-scheme: dark;
-    --bg:         #0f0f1a;
-    --surface:    #1e1e2e;
-    --primary:    #7c83fd;
-    --primary-hv: #9fa6ff;
-    --text:       #e0e0e0;
-    --text-muted: #aaaaaa;
-    --border:     #333355;
-    --row-hover:  #2a2a3e;
-    --th-bg:      #2a2a4e;
-    --th-color:   #e0e0ff;
-    --tag-bg:     #2a2a4e;
-    --shadow:     rgba(0,0,0,0.3);
-}
-
-/* ── Reset ── */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-body {
-    font-family: Arial, sans-serif;
+/* ── Ταινία της ημέρας ── */
+.daily-card {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
     background: var(--bg);
-    color: var(--text);
-    transition: background 0.3s, color 0.3s;
-}
-
-/* ── Header ── */
-header {
-    background: var(--primary);
-    color: white;
-    padding: 20px 40px;
-}
-
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 900px;
-    margin: 0 auto;
-}
-
-header h1 { font-size: 1.8rem; margin-bottom: 4px; }
-header p  { font-size: 0.95rem; opacity: 0.8; }
-
-#theme-toggle {
-    background: transparent;
-    border: 2px solid white;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background 0.2s;
-    white-space: nowrap;
-}
-
-#theme-toggle:hover { background: rgba(255,255,255,0.15); }
-
-/* ── Main layout ── */
-main {
-    max-width: 900px;
-    margin: 30px auto;
-    padding: 0 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
-
-/* ── Sections ── */
-section {
-    background: var(--surface);
     border-radius: 10px;
-    padding: 24px;
-    box-shadow: 0 2px 8px var(--shadow);
-    transition: background 0.3s;
-    animation: fadeIn 0.4s ease;
+    padding: 16px;
+    border: 1px solid var(--border);
+    animation: fadeIn 0.5s ease;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
+.daily-card img {
+    width: 80px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 6px;
+    box-shadow: 0 4px 10px var(--shadow);
+    flex-shrink: 0;
 }
 
-section h2 {
-    margin-bottom: 16px;
-    font-size: 1.3rem;
-    color: var(--primary);
-    border-bottom: 2px solid var(--border);
-    padding-bottom: 8px;
-}
-
-/* ── Input row ── */
-.input-row {
+.daily-card .daily-no-poster {
+    width: 80px;
+    height: 120px;
+    background: var(--border);
+    border-radius: 6px;
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    flex-shrink: 0;
 }
 
-input[type="text"],
-input[type="number"] {
-    flex: 1;
-    min-width: 150px;
-    padding: 10px 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 1rem;
-    background: var(--surface);
-    color: var(--text);
-    transition: border-color 0.2s, background 0.3s;
+.daily-info { flex: 1; }
+
+.daily-info h3 {
+    font-size: 1.2rem;
+    color: var(--primary);
+    margin-bottom: 6px;
 }
 
-input[type="text"]:focus,
-input[type="number"]:focus {
-    outline: none;
-    border-color: var(--primary);
-}
-
-[data-theme="dark"] input::placeholder { color: #777799; }
-
-button {
-    padding: 10px 20px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background 0.2s, transform 0.1s;
-}
-
-button:hover  { background: var(--primary-hv); transform: translateY(-1px); }
-button:active { transform: translateY(0); }
-
-/* ── Πίνακες ── */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 14px;
-    font-size: 0.95rem;
-    animation: fadeIn 0.3s ease;
-}
-
-th {
-    background: var(--th-bg);
-    color: var(--th-color);
-    padding: 10px 14px;
-    text-align: left;
-}
-
-td {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    color: var(--text);
-}
-
-tr:hover td { background: var(--row-hover); }
-
-/* ── Select ── */
-select {
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    font-size: 0.95rem;
-    cursor: pointer;
-    background: var(--surface);
-    color: var(--text);
-    transition: background 0.3s;
-}
-
-/* ── Trailer link ── */
-.trailer-link {
-    display: inline-block;
-    padding: 5px 12px;
-    background: #ff0000;
-    color: white;
-    border-radius: 5px;
-    text-decoration: none;
-    font-size: 0.85rem;
-    transition: background 0.2s, transform 0.1s;
-}
-
-.trailer-link:hover { background: #cc0000; transform: translateY(-1px); }
-
-/* ── Watchlist button ── */
-.watchlist-btn {
-    padding: 5px 12px;
-    background: #27ae60;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: background 0.2s;
-}
-
-.watchlist-btn:hover { background: #1e8449; }
-
-.remove-btn {
-    padding: 5px 12px;
-    background: #e74c3c;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: background 0.2s;
-}
-
-.remove-btn:hover { background: #c0392b; }
-
-/* ── Rating select ── */
-.rating-select {
-    padding: 6px 10px;
-    border-radius: 5px;
-    border: 1px solid var(--border);
-    font-size: 0.9rem;
-    background: var(--surface);
-    color: var(--text);
-}
-
-/* ── Μηνύματα ── */
-.error-msg {
-    color: #e74c3c;
-    font-size: 0.9rem;
-    margin-top: 6px;
-    min-height: 20px;
-}
-
-.feedback-msg         { font-size: 0.95rem; margin-top: 8px; min-height: 20px; }
-.feedback-msg.success { color: #27ae60; }
-.feedback-msg.error   { color: #e74c3c; }
-
-.hint {
+.daily-info .daily-meta {
     font-size: 0.9rem;
     color: var(--text-muted);
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
-/* ── Βαθμολογίες χρήστη ── */
-#my-ratings-list { margin-bottom: 14px; font-size: 0.95rem; }
+.daily-info .daily-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
 
-#my-ratings-list span {
+/* ── Ιστορικό αναζητήσεων ── */
+#search-history-container {
+    margin-bottom: 10px;
+}
+
+.history-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.clear-history-btn {
+    padding: 2px 8px;
+    font-size: 0.8rem;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.clear-history-btn:hover {
+    background: var(--border);
+    transform: none;
+}
+
+.history-tag {
     display: inline-block;
     background: var(--tag-bg);
     color: var(--text);
-    border-radius: 5px;
-    padding: 4px 10px;
-    margin: 4px;
+    border-radius: 20px;
+    padding: 4px 12px;
+    margin: 3px;
     font-size: 0.85rem;
-}
-
-/* ── Utility ── */
-.hidden { display: none; }
-
-input[type="file"] {
-    padding: 8px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface);
-    color: var(--text);
     cursor: pointer;
-}
-
-/* ── Pagination ── */
-.pagination-row {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 16px;
-    margin-top: 14px;
-}
-
-#page-info { font-size: 0.95rem; color: var(--text-muted); }
-
-/* ── Αφίσες ── */
-.movie-poster {
-    width: 45px;
-    height: 65px;
-    object-fit: cover;
-    border-radius: 4px;
-    box-shadow: 0 2px 6px var(--shadow);
-}
-
-.no-poster {
-    width: 45px;
-    height: 65px;
-    background: var(--border);
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.4rem;
-}
-
-/* ── Στατιστικά ── */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 16px;
-    margin-top: 8px;
-}
-
-.stat-card {
-    background: var(--bg);
-    border-radius: 8px;
-    padding: 16px;
-    text-align: center;
     border: 1px solid var(--border);
-    transition: background 0.3s;
-}
-
-.stat-card .stat-value {
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: var(--primary);
-}
-
-.stat-card .stat-label {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin-top: 4px;
-}
-
-/* ── Toggle IMDb button ── */
-.toggle-imdb-btn {
-    padding: 10px 20px;
-    background: #e67e22;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
     transition: background 0.2s;
 }
 
-.toggle-imdb-btn:hover        { background: #ca6f1e; }
-.toggle-imdb-btn.active       { background: #27ae60; }
-.toggle-imdb-btn.active:hover { background: #1e8449; }
-
-/* ═══════════════════════════════════════
-   🆕 SKELETON LOADING
-═══════════════════════════════════════ */
-.skeleton {
-    background: linear-gradient(90deg, var(--border) 25%, var(--row-hover) 50%, var(--border) 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-    border-radius: 4px;
-}
-
-@keyframes shimmer {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-.skeleton-row td { padding: 12px 14px; }
-
-.skeleton-poster {
-    display: block;
-    width: 45px;
-    height: 65px;
-    border-radius: 4px;
-}
-
-.skeleton-text-long  { display: block; height: 14px; width: 80%; }
-.skeleton-text-short { display: block; height: 14px; width: 50%; }
-.skeleton-text-tiny  { display: block; height: 14px; width: 30%; }
-
-/* ═══════════════════════════════════════
-   🆕 TOAST NOTIFICATIONS
-═══════════════════════════════════════ */
-#toast-container {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    z-index: 9999;
-}
-
-.toast {
-    padding: 12px 20px;
-    border-radius: 8px;
+.history-tag:hover {
+    background: var(--primary);
     color: white;
-    font-size: 0.95rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    animation: slideIn 0.3s ease, fadeOut 0.4s ease 2.6s forwards;
-    max-width: 300px;
-    word-wrap: break-word;
 }
 
-.toast.success { background: #27ae60; }
-.toast.error   { background: #e74c3c; }
-.toast.info    { background: #2980b9; }
-
-@keyframes slideIn {
-    from { transform: translateX(120%); opacity: 0; }
-    to   { transform: translateX(0);    opacity: 1; }
+/* ── Γράφημα genres ── */
+.genre-bar-container {
+    margin-top: 16px;
 }
 
-@keyframes fadeOut {
-    from { opacity: 1; }
-    to   { opacity: 0; transform: translateY(10px); }
+.genre-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
 }
 
-/* ═══════════════════════════════════════
-   🆕 RESPONSIVE DESIGN
-═══════════════════════════════════════ */
-@media (max-width: 768px) {
-    header { padding: 16px 20px; }
-
-    .header-content {
-        flex-direction: column;
-        gap: 12px;
-        text-align: center;
-    }
-
-    header h1 { font-size: 1.4rem; }
-
-    main { margin: 16px auto; padding: 0 12px; gap: 16px; }
-
-    section { padding: 16px; }
-
-    .input-row {
-        flex-direction: column;
-    }
-
-    input[type="text"],
-    input[type="number"],
-    select,
-    button {
-        width: 100%;
-    }
-
-    /* Κρύβουμε κάποιες στήλες στα μικρά table */
-    table { font-size: 0.85rem; }
-
-    #search-results th:nth-child(4),
-    #search-results td:nth-child(4),
-    #rec-results th:nth-child(4),
-    #rec-results td:nth-child(4) { display: none; } /* Κρύβουμε στήλη Έτους */
-
-    .movie-poster {
-        width: 35px;
-        height: 50px;
-    }
-
-    .trailer-link,
-    .watchlist-btn,
-    .remove-btn {
-        padding: 4px 8px;
-        font-size: 0.8rem;
-    }
-
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    #toast-container {
-        bottom: 16px;
-        right: 16px;
-        left: 16px;
-    }
-
-    .toast { max-width: 100%; }
-
-    .pagination-row { gap: 8px; }
-    .pagination-row button { padding: 8px 12px; font-size: 0.9rem; }
+.genre-bar-label {
+    width: 100px;
+    font-size: 0.85rem;
+    color: var(--text);
+    text-align: right;
+    flex-shrink: 0;
 }
 
-@media (max-width: 480px) {
-    header h1 { font-size: 1.2rem; }
+.genre-bar-track {
+    flex: 1;
+    background: var(--border);
+    border-radius: 4px;
+    height: 18px;
+    overflow: hidden;
+}
 
-    #search-results th:nth-child(3),
-    #search-results td:nth-child(3),
-    #rec-results th:nth-child(3),
-    #rec-results td:nth-child(3) { display: none; } /* Κρύβουμε και το Είδος */
+.genre-bar-fill {
+    height: 18px;
+    border-radius: 4px;
+    background: var(--primary);
+    transition: width 0.8s ease;
+}
 
-    .stats-grid { grid-template-columns: 1fr 1fr; }
+.genre-bar-count {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    width: 30px;
+    flex-shrink: 0;
 }

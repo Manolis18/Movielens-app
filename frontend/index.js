@@ -74,6 +74,121 @@ let myRatings   = saved.ratings;
 let myWatchlist = saved.watchlist;
 
 // ─────────────────────────────────────────
+// ΙΣΤΟΡΙΚΟ ΑΝΑΖΗΤΗΣΕΩΝ
+// ─────────────────────────────────────────
+function loadSearchHistory() {
+    try {
+        const h = localStorage.getItem("searchHistory");
+        return h ? JSON.parse(h) : [];
+    } catch { return []; }
+}
+
+function saveSearchHistory(history) {
+    localStorage.setItem("searchHistory", JSON.stringify(history));
+}
+
+function addToSearchHistory(keyword) {
+    let history = loadSearchHistory();
+    history = history.filter(h => h !== keyword); // αφαιρούμε διπλότυπα
+    history.unshift(keyword);                       // προσθέτουμε στην αρχή
+    history = history.slice(0, 8);                 // κρατάμε μόνο 8
+    saveSearchHistory(history);
+    renderSearchHistory();
+}
+
+function renderSearchHistory() {
+    const container = document.getElementById("search-history-container");
+    const tagsDiv   = document.getElementById("search-history-tags");
+    const history   = loadSearchHistory();
+
+    if (history.length === 0) {
+        container.classList.add("hidden");
+        return;
+    }
+
+    container.classList.remove("hidden");
+    tagsDiv.innerHTML = history.map(h =>
+        `<span class="history-tag" onclick="searchFromHistory('${h.replace(/'/g, "\\'")}')">${h}</span>`
+    ).join("");
+}
+
+function searchFromHistory(keyword) {
+    document.getElementById("search-input").value = keyword;
+    searchMovies();
+}
+
+function clearSearchHistory() {
+    localStorage.removeItem("searchHistory");
+    renderSearchHistory();
+    showToast("Ιστορικό αναζητήσεων καθαρίστηκε!", "info");
+}
+
+// ─────────────────────────────────────────
+// ΤΑΙΝΙΑ ΤΗΣ ΗΜΕΡΑΣ
+// ─────────────────────────────────────────
+async function loadDailyMovie() {
+    const container = document.getElementById("daily-movie-content");
+    container.innerHTML = `<div class="skeleton" style="height:120px; border-radius:8px;"></div>`;
+
+    try {
+        // Χρησιμοποιούμε την ημερομηνία σαν seed για να είναι ίδια ταινία όλη μέρα
+        const today    = new Date().toISOString().split("T")[0];
+        const seed     = today.split("-").reduce((a, b) => parseInt(a) + parseInt(b), 0);
+        const letter   = "abcdefghijklmnopqrstuvwxyz"[seed % 26];
+
+        const res      = await fetch(`${API}/movies?search=${letter}`);
+        const data     = await res.json();
+
+        if (!data.movies || data.movies.length === 0) {
+            container.innerHTML = "<p class='hint'>Δεν βρέθηκε ταινία σήμερα.</p>";
+            return;
+        }
+
+        // Επιλογή ταινίας βάσει ημερομηνίας
+        const movie  = data.movies[seed % data.movies.length];
+        const year   = extractYear(movie.title) || "—";
+        const poster = await fetchPoster(movie.title, extractYear(movie.title));
+
+        // Φέρνουμε μέση βαθμολογία
+        const avgRes  = await fetch(`${API}/average-ratings`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ movieIds: [movie.movieId] })
+        });
+        const avgData = await avgRes.json();
+        const info    = avgData.averages[movie.movieId];
+        const avg     = info ? `${info.avg} ★ (${info.count} ψήφοι)` : "Χωρίς βαθμολογία";
+
+        const posterEl = poster
+            ? `<img src="${poster}" alt="Αφίσα">`
+            : `<div class="daily-no-poster">🎬</div>`;
+
+        container.innerHTML = `
+            <div class="daily-card">
+                ${posterEl}
+                <div class="daily-info">
+                    <h3>${movie.title}</h3>
+                    <div class="daily-meta">
+                        🎭 ${movie.genres.replace(/\|/g, " · ")} &nbsp;|&nbsp;
+                        📅 ${year} &nbsp;|&nbsp;
+                        ⭐ ${avg}
+                    </div>
+                    <div class="daily-actions">
+                        <a class="trailer-link" href="${trailerLink(movie.title)}" target="_blank">▶ Trailer</a>
+                        <button class="watchlist-btn" onclick="addToWatchlist(${movie.movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.genres.replace(/'/g, "\\'")}')">
+                            + Watchlist
+                        </button>
+                        <button onclick="loadDailyMovie()">🔀 Άλλη ταινία</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        container.innerHTML = "<p class='hint'>Σφάλμα φόρτωσης ταινίας.</p>";
+    }
+}
+
+// ─────────────────────────────────────────
 // DARK MODE
 // ─────────────────────────────────────────
 function toggleTheme() {
@@ -229,7 +344,6 @@ async function renderPage() {
     const start      = (currentPage - 1) * PER_PAGE;
     const pageMovies = currentMovies.slice(start, start + PER_PAGE);
 
-    // Skeleton loading
     table.classList.remove("hidden");
     showSkeleton("search-results-body", 6, pageMovies.length);
 
@@ -254,13 +368,9 @@ async function renderPage() {
                             `<option value="${v}">${v} ★</option>`
                         ).join("")}
                     </select>
-                    <button onclick="rateMovie(${movie.movieId}, '${movie.title.replace(/'/g, "\\'")}')">
-                        Αποθήκευση
-                    </button>
+                    <button onclick="rateMovie(${movie.movieId}, '${movie.title.replace(/'/g, "\\'")}')">Αποθήκευση</button>
                     <a class="trailer-link" href="${trailerLink(movie.title)}" target="_blank">▶ Trailer</a>
-                    <button class="watchlist-btn" onclick="addToWatchlist(${movie.movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.genres.replace(/'/g, "\\'")}')">
-                        + Watchlist
-                    </button>
+                    <button class="watchlist-btn" onclick="addToWatchlist(${movie.movieId}, '${movie.title.replace(/'/g, "\\'")}', '${movie.genres.replace(/'/g, "\\'")}')">+ Watchlist</button>
                 </div>
             </td>
         `;
@@ -323,6 +433,9 @@ async function searchMovies() {
         currentAverages = avgData.averages;
         currentPage     = 1;
 
+        // Αποθήκευση στο ιστορικό
+        addToSearchHistory(keyword);
+
         sortCtrl.classList.remove("hidden");
         showToast(`Βρέθηκαν ${movies.length} ταινίες!`, "success");
         renderPage();
@@ -363,7 +476,6 @@ function updateRatingsList() {
     let html = "<strong>Οι βαθμολογίες σου:</strong>";
     if (hidden > 0) html += ` <span style="color:var(--text-muted); font-size:0.85rem;">(${hidden} IMDb κρυμμένες)</span>`;
     html += "<br>";
-
     if (entries.length === 0) {
         html += "<span style='color:var(--text-muted);'>Όλες κρυμμένες.</span>";
     } else {
@@ -469,7 +581,6 @@ async function addMovie() {
             body: JSON.stringify({ title, genres })
         });
         const data = await res.json();
-
         if (data.status === "success") {
             showToast(`Ταινία προστέθηκε με ID: ${data.movieId}`, "success");
             document.getElementById("add-title").value  = "";
@@ -509,7 +620,6 @@ async function getRecommendations() {
         return;
     }
 
-    // Skeleton loading
     table.classList.remove("hidden");
     showSkeleton("rec-results-body", 6, 5);
 
@@ -568,9 +678,7 @@ async function getRecommendations() {
                 <td>
                     <div style="display:flex; gap:6px;">
                         <a class="trailer-link" href="${trailerLink(rec.title)}" target="_blank">▶ Trailer</a>
-                        <button class="watchlist-btn" onclick="addToWatchlist(${rec.movieId}, '${rec.title.replace(/'/g, "\\'")}', '${rec.genres.replace(/'/g, "\\'")}')">
-                            + Watchlist
-                        </button>
+                        <button class="watchlist-btn" onclick="addToWatchlist(${rec.movieId}, '${rec.title.replace(/'/g, "\\'")}', '${rec.genres.replace(/'/g, "\\'")}')">+ Watchlist</button>
                     </div>
                 </td>
             `;
@@ -590,7 +698,7 @@ async function getRecommendations() {
 }
 
 // ─────────────────────────────────────────
-// ΣΤΑΤΙΣΤΙΚΑ
+// ΣΤΑΤΙΣΤΙΚΑ + ΓΡΑΦΗΜΑ GENRES
 // ─────────────────────────────────────────
 function showStats() {
     const container = document.getElementById("stats-content");
@@ -614,6 +722,7 @@ function showStats() {
     const imdbCount   = Object.values(myRatings).filter(v => v.fromIMDb).length;
     const manualCount = total - imdbCount;
 
+    // Κατανομή βαθμολογιών
     const distribution = {};
     for (const r of ratings) distribution[r] = (distribution[r] || 0) + 1;
 
@@ -631,6 +740,41 @@ function showStats() {
                 </div>
             `;
         }).join("");
+
+    // Αγαπημένα genres — μετράμε από τα ratings
+    const genreCount = {};
+    for (const [movieId, v] of entries) {
+        // Αναζητούμε genres από watchlist ή από τον τίτλο
+        const wl = myWatchlist[movieId];
+        if (wl?.genres) {
+            wl.genres.split("|").forEach(g => {
+                genreCount[g.trim()] = (genreCount[g.trim()] || 0) + 1;
+            });
+        }
+    }
+
+    const topGenres = Object.entries(genreCount)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 8);
+
+    const maxGenreCount = topGenres.length > 0 ? topGenres[0][1] : 1;
+
+    const genreHTML = topGenres.length > 0 ? `
+        <div class="genre-bar-container">
+            <strong>Αγαπημένα Genres (από Watchlist):</strong>
+            <div style="margin-top:10px;">
+                ${topGenres.map(([genre, count]) => `
+                    <div class="genre-bar-row">
+                        <span class="genre-bar-label">${genre}</span>
+                        <div class="genre-bar-track">
+                            <div class="genre-bar-fill" style="width:${Math.round((count/maxGenreCount)*100)}%"></div>
+                        </div>
+                        <span class="genre-bar-count">${count}</span>
+                    </div>
+                `).join("")}
+            </div>
+        </div>
+    ` : "";
 
     container.innerHTML = `
         <div class="stats-grid">
@@ -668,10 +812,13 @@ function showStats() {
                 <div class="stat-label">Αγαπημένη (${favorite.rating}★)</div>
             </div>` : ""}
         </div>
+
         <div style="margin-top:20px;">
             <strong>Κατανομή Βαθμολογιών:</strong>
             <div style="margin-top:10px;">${distHTML || "<p class='hint'>Καμία ενεργή βαθμολογία.</p>"}</div>
         </div>
+
+        ${genreHTML}
     `;
 }
 
@@ -691,8 +838,8 @@ async function importIMDb() {
         return;
     }
 
-    const file = fileInput.files[0];
-    const text = await file.text();
+    const file    = fileInput.files[0];
+    const text    = await file.text();
     const lines   = text.split("\n").filter(l => l.trim() !== "");
     const headers = lines[0].split(",").map(h => h.trim().replace(/"/g, ""));
 
@@ -754,6 +901,8 @@ loadTheme();
 updateRatingsList();
 updateWatchlist();
 showStats();
+renderSearchHistory();
+loadDailyMovie();
 
 const hasIMDb = Object.values(myRatings).some(v => v.fromIMDb);
 if (hasIMDb) document.getElementById("toggle-imdb-btn").classList.remove("hidden");
