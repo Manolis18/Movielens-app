@@ -101,17 +101,19 @@ class RecommendationRequest(BaseModel):
 
 @app.post("/movielens/api/recommendations")
 def get_recommendations(request: RecommendationRequest):
-    # Οι ταινίες που έχει βαθμολογήσει ο χρήστης u
-    user_ratings = {r.movieId: r.rating for r in request.ratings}
-    # Περιορίζουμε στις 50 πιο υψηλά βαθμολογημένες για ταχύτητα
-    top_rated    = sorted(user_ratings.items(), key=lambda x: x[1], reverse=True)[:50]
-    rated_movies = set(dict(top_rated).keys())
+    import numpy as np
 
-    conn = get_conn()
+    user_ratings = {r.movieId: r.rating for r in request.ratings}
+
+    # Περιορίζουμε στις 30 πιο υψηλά βαθμολογημένες για ταχύτητα
+    top_rated    = sorted(user_ratings.items(), key=lambda x: x[1], reverse=True)[:30]
+    rated_movies = set(dict(top_rated).keys())
+    user_ratings = dict(top_rated)
+
+    conn   = get_conn()
     cursor = conn.cursor()
 
-    # Βρίσκουμε όλους τους χρήστες v που έχουν βαθμολογήσει
-    # τουλάχιστον μία από τις ταινίες του χρήστη u
+    # Βρίσκουμε υποψήφιους χρήστες
     placeholders = ",".join("?" * len(rated_movies))
     cursor.execute(
         f"SELECT DISTINCT userId FROM ratings WHERE movieId IN ({placeholders})",
@@ -119,9 +121,7 @@ def get_recommendations(request: RecommendationRequest):
     )
     candidate_users = [row["userId"] for row in cursor.fetchall()]
 
-    # Για κάθε υποψήφιο χρήστη v, φορτώνουμε τις βαθμολογίες του
-    # και υπολογίζουμε Pearson correlation με τον χρήστη u
-    K = 10  # αριθμός κοντινότερων γειτόνων
+    K          = 5
     similarities = {}
 
     for v in candidate_users:
@@ -130,89 +130,80 @@ def get_recommendations(request: RecommendationRequest):
         )
         v_ratings_raw = {row["movieId"]: row["rating"] for row in cursor.fetchall()}
 
-        # Βρίσκουμε κοινές ταινίες
         common = rated_movies & set(v_ratings_raw.keys())
         if len(common) < 2:
-            continue  # χρειαζόμαστε τουλάχιστον 2 κοινές για Pearson
-
-        u_vec = [user_ratings[m] for m in common]
-        v_vec = [v_ratings_raw[m] for m in common]
-
-        try:
-            corr, _ = pearsonr(u_vec, v_vec)
-            if corr > 0:  # κρατάμε μόνο θετικές ομοιότητες
-                similarities[v] = (corr, v_ratings_raw)
-        except Exception:
             continue
 
-    # Κρατάμε τους top-K πιο όμοιους χρήστες
+        # Numpy vectors αντί για Python lists
+        u_vec = np.array([user_ratings[m] for m in common])
+        v_vec = np.array([v_ratings_raw[m] for m in common])
+
+        # Pearson με numpy — πολύ πιο γρήγορο
+        u_mean = np.mean(u_vec)
+        v_mean = np.mean(v_vec)
+        u_dev  = u_vec - u_mean
+        v_dev  = v_vec - v_mean
+
+        denom = np.sqrt(np.sum(u_dev**2)) * np.sqrt(np.sum(v_dev**2))
+        if denom == 0:
+            continue
+
+        corr = np.sum(u_dev * v_dev) / denom
+        if corr > 0:
+            similarities[v] = (float(corr), v_ratings_raw)
+
+    # Top-K γείτονες
     top_k = sorted(similarities.items(), key=lambda x: x[1][0], reverse=True)[:K]
 
-    # Για κάθε ταινία που ΔΕΝ έχει δει ο u, υπολογίζουμε predicted rating
-    # Συλλέγουμε υποψήφιες ταινίες από τους top-K χρήστες
+    # Υποψήφιες ταινίες
     candidate_movies = set()
     for _, (_, v_ratings_raw) in top_k:
         candidate_movies.update(set(v_ratings_raw.keys()) - rated_movies)
-        # Φιλτράρισμα ανά genre αν έχει οριστεί
-    if request.genres:
-        cursor.execute(
-            "SELECT movieId FROM movies WHERE LOWER(genres) LIKE LOWER(?)",
-            (f"%{request.genres}%",)
-        )
-        genre_ids = {row["movieId"] for row in cursor.fetchall()}
-        candidate_movies = candidate_movies & genre_ids
-# Φιλτράρισμα ανά genre αν έχει οριστεί
-    if request.genres:
-        cursor.execute(
-            "SELECT movieId FROM movies WHERE LOWER(genres) LIKE LOWER(?)",
-            (f"%{request.genres}%",)
-        )
-        genre_ids = {row["movieId"] for row in cursor.fetchall()}
-        candidate_movies = candidate_movies & genre_ids
-    N = request.n  # αριθμός συστάσεων
-    predictions = []
 
-    # Μέση βαθμολογία χρήστη u
-    u_mean = sum(user_ratings.values()) / len(user_ratings)
+    # Φιλτράρισμα ανά genre
+    if request.genres:
+        cursor.execute(
+            "SELECT movieId FROM movies WHERE LOWER(genres) LIKE LOWER(?)",
+            (f"%{request.genres}%",)
+        )
+        genre_ids        = {row["movieId"] for row in cursor.fetchall()}
+        candidate_movies = candidate_movies & genre_ids
+
+    N            = request.n
+    u_mean_global = np.mean(list(user_ratings.values()))
+    predictions  = []
 
     for movie_i in candidate_movies:
-        numerator = 0.0
+        numerator   = 0.0
         denominator = 0.0
 
         for _, (sim_uv, v_ratings_raw) in top_k:
             if movie_i not in v_ratings_raw:
                 continue
-            # Μέση βαθμολογία χρήστη v
-            v_mean = sum(v_ratings_raw.values()) / len(v_ratings_raw)
+            v_mean      = np.mean(list(v_ratings_raw.values()))
             numerator   += sim_uv * (v_ratings_raw[movie_i] - v_mean)
             denominator += abs(sim_uv)
 
         if denominator == 0:
             continue
 
-        predicted = u_mean + (numerator / denominator)
-        # Κλαμπάρουμε μεταξύ 0.5 και 5.0
-        import random
-        predicted = max(0.5, min(5.0, predicted))
-        # Μικρή τυχαία διαταραχή ±0.15 για ποικιλία στις προτάσεις
-        noise = random.uniform(-0.15, 0.15)
+        predicted = u_mean_global + (numerator / denominator)
+        noise     = random.uniform(-0.15, 0.15)
         predicted = max(0.5, min(5.0, predicted + noise))
         predictions.append((movie_i, predicted))
 
-    # Ταξινομούμε και κρατάμε top-N
     predictions.sort(key=lambda x: x[1], reverse=True)
     top_n = predictions[:N]
 
-    # Φέρνουμε τα στοιχεία των ταινιών από τη βάση
     recommendations = []
     for movie_id, pred_rating in top_n:
         cursor.execute("SELECT * FROM movies WHERE movieId = ?", (movie_id,))
         row = cursor.fetchone()
         if row:
             recommendations.append({
-                "movieId": row["movieId"],
-                "title": row["title"],
-                "genres": row["genres"],
+                "movieId":       row["movieId"],
+                "title":         row["title"],
+                "genres":        row["genres"],
                 "predictedRating": round(pred_rating, 2)
             })
 
