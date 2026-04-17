@@ -3,8 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sqlite3
 import os
+import random
 from typing import List
 from scipy.stats import pearsonr
+import numpy as np
+
 
 # ─────────────────────────────────────────
 # ΑΡΧΙΚΟΠΟΙΗΣΗ APP
