@@ -603,6 +603,7 @@ async function getRecommendations() {
         btn.textContent = "Λήψη Προτάσεων";
         btn.disabled    = false;
     }
+}
 
 // ─────────────────────────────────────────
 // ΣΤΑΤΙΣΤΙΚΑ ΧΡΗΣΤΗ
@@ -694,7 +695,7 @@ function showStats() {
             <div style="margin-top:10px;">${distHTML || "<p class='hint'>Καμία ενεργή βαθμολογία.</p>"}</div>
         </div>
     `;
-}}
+}
 
 // ─────────────────────────────────────────
 // ΕΙΣΑΓΩΓΗ ΑΠΟ IMDB
