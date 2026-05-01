@@ -1208,33 +1208,40 @@ async function importIMDb() {
     feedback.className   = "feedback-msg success";
 
     try {
-        const res  = await fetch(`${API}/match-titles`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ titles })
-        });
-        const data = await res.json();
+    const res  = await fetch(`${API}/match-titles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titles })
+    });
+    const data = await res.json();
 
-        let loaded = 0;
-        for (const match of data.matches) {
-            const imdbRating = imdbRatings[match.imdbTitle];
-            const converted  = Math.round((imdbRating / 2) * 2) / 2;
-            const clamped    = Math.max(0.5, Math.min(5.0, converted));
-            myRatings[match.movieId] = { title: match.movieTitle, rating: clamped, fromIMDb: true };
-            loaded++;
-        }
-
-        saveToStorage();
-        updateRatingsList();
-        showStats();
-        toggleBtn.classList.remove("hidden");
-        feedback.textContent = `Εισήχθησαν ${loaded} ταινίες από τις ${titles.length}.`;
-        showToast(`Εισήχθησαν ${loaded} ταινίες από IMDb!`, "success");
-
-    } catch (err) {
-        showToast("Σφάλμα σύνδεσης με τον server!", "error");
-        feedback.className = "feedback-msg error";
+    if (!data.matches) {
+        showToast("Σφάλμα απάντησης server!", "error");
+        return;
     }
+
+    let loaded = 0;
+    for (const m of data.matches) {
+        const imdbRating = imdbRatings[m.imdbTitle];
+        if (!imdbRating) continue;
+        const converted = Math.round((imdbRating / 2) * 2) / 2;
+        const clamped   = Math.max(0.5, Math.min(5.0, converted));
+        myRatings[m.movieId] = { title: m.movieTitle, rating: clamped, fromIMDb: true };
+        syncRatingToServer(m.movieId, clamped, true);
+        loaded++;
+    }
+
+    saveToStorage();
+    updateRatingsList();
+    showStats();
+    toggleBtn.classList.remove("hidden");
+    feedback.textContent = `Εισήχθησαν ${loaded} ταινίες από τις ${titles.length}.`;
+    showToast(`Εισήχθησαν ${loaded} ταινίες από IMDb!`, "success");
+
+} catch (err) {
+    showToast("Σφάλμα σύνδεσης με τον server!", "error");
+    feedback.className = "feedback-msg error";
+}
 }
 
 // ─────────────────────────────────────────
