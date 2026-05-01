@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="el" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieLens App</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="icon" type="image/x-icon" href="MvL.ico">
+    <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MovieLens">
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<header>
+    <div class="header-content">
+        <div>
+            <h1>🎬 MovieLens Explorer</h1>
+            <p>Αναζήτηση, βαθμολόγηση και προτάσεις ταινιών</p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <div id="user-info" class="hidden" style="color:white; font-size:0.9rem;"></div>
+            <button id="auth-btn" onclick="openAuthModal()">🔐 Σύνδεση</button>
+            <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark Mode</button>
+        </div>
+    </div>
+</header>
+
+<!-- Auth Modal -->
+<div id="auth-modal" class="modal-overlay hidden" style="display:none;">
+    <div class="modal" style="max-width:400px;">
+        <h2 id="auth-title" style="margin-bottom:16px; color:var(--primary);">🔐 Σύνδεση</h2>
+
+        <div class="input-row" style="flex-direction:column;">
+            <input type="text" id="auth-username" placeholder="Username (τουλάχιστον 3 χαρακτήρες)"
+                   onkeydown="if(event.key==='Enter') submitAuth()">
+            <input type="password" id="auth-password" placeholder="Κωδικός (τουλάχιστον 6 χαρακτήρες)"
+                   onkeydown="if(event.key==='Enter') submitAuth()">
+        </div>
+
+        <div id="auth-error" class="error-msg" style="margin-bottom:8px;"></div>
+
+        <div style="display:flex; gap:10px; margin-top:8px;">
+            <button id="auth-submit-btn" onclick="submitAuth()" style="flex:1;">Σύνδεση</button>
+            <button onclick="closeAuthModal()" style="background:var(--border); color:var(--text);">Άκυρο</button>
+        </div>
+
+        <div style="text-align:center; margin-top:12px; font-size:0.9rem; color:var(--text-muted);">
+            <span id="auth-switch-text">Δεν έχεις λογαριασμό;</span>
+            <button onclick="toggleAuthMode()" style="background:transparent; color:var(--primary); padding:0; font-size:0.9rem; text-decoration:underline;">
+                <span id="auth-switch-btn">Εγγραφή</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<main>
+
+    <!-- ─── SECTION 0: Ταινία της ημέρας ─── -->
+    <section id="section-daily">
+        <h2>🎲 Ταινία της Ημέρας</h2>
+        <p class="hint">Μια τυχαία πρόταση για σήμερα!</p>
+        <div id="daily-movie-content">
+            <button onclick="loadDailyMovie()">Ανακάλυψε τη Ταινία της Ημέρας</button>
+        </div>
+    </section>
+
+    <!-- ─── SECTION AI: Chat Assistant ─── -->
+<section id="section-ai">
+    <h2>🤖 AI Βοηθός Ταινιών</h2>
+    <p class="hint">Ρώτα με στα ελληνικά ή αγγλικά — π.χ. "Θέλω κάτι σαν το Inception αλλά πιο ελαφρύ"</p>
+
+    <div id="chat-messages"></div>
+
+    <div class="chat-input-row">
+        <input type="text" id="chat-input"
+               placeholder="π.χ. Θέλω ταινία για βραδιά με φίλους..."
+               onkeydown="if(event.key==='Enter') sendChatMessage()">
+        <button onclick="sendChatMessage()" id="chat-send-btn">Αποστολή ✈️</button>
+    </div>
+
+    <div class="chat-suggestions">
+        <span onclick="setChatInput('Θέλω κάτι σαν το Inception αλλά πιο ελαφρύ')">💡 Σαν το Inception</span>
+        <span onclick="setChatInput('Ποια ταινία να δω απόψε με την παρέα;')">💡 Για παρέα</span>
+        <span onclick="setChatInput('Θέλω ταινία που θα με κάνει να σκεφτώ')">💡 Να σκεφτώ</span>
+        <span onclick="setChatInput('Δείξε μου κλασικές ταινίες 90s')">💡 Κλασικές 90s</span>
+        <span onclick="setChatInput('Θέλω κάτι με happy ending')">💡 Happy ending</span>
+    </div>
+</section>
+
+    <!-- ─── SECTION 1: Αναζήτηση ─── -->
+    <!-- ─── SECTION 1: Αναζήτηση ─── -->
+<section id="section-search">
+    <h2>Αναζήτηση Ταινιών</h2>
+
+    <!-- Βασική αναζήτηση -->
+    <div class="input-row">
+        <input type="text" id="search-input" placeholder="π.χ. Toy Story, Matrix..."
+               onkeydown="if(event.key==='Enter') searchMovies()">
+        <button onclick="searchMovies()">🔍 Αναζήτηση</button>
+    </div>
+
+    <!-- Προηγμένα φίλτρα -->
+    <div class="advanced-filters">
+        <div class="filters-toggle" onclick="toggleFilters()">
+            ⚙️ Προηγμένα Φίλτρα <span id="filters-arrow">▼</span>
+        </div>
+        <div id="filters-panel" class="hidden">
+            <div class="input-row" style="margin-top:10px;">
+                <input type="number" id="year-from" placeholder="Από έτος" min="1900" max="2025"
+                       onkeydown="if(event.key==='Enter') searchMovies()">
+                <input type="number" id="year-to" placeholder="Έως έτος" min="1900" max="2025"
+                       onkeydown="if(event.key==='Enter') searchMovies()">
+            </div>
+            <div class="input-row">
+                <select id="decade-filter">
+                    <option value="">Όλες οι δεκαετίες</option>
+                    <option value="1950">50s (1950-1959)</option>
+                    <option value="1960">60s (1960-1969)</option>
+                    <option value="1970">70s (1970-1979)</option>
+                    <option value="1980">80s (1980-1989)</option>
+                    <option value="1990">90s (1990-1999)</option>
+                    <option value="2000">00s (2000-2009)</option>
+                    <option value="2010">10s (2010-2019)</option>
+                    <option value="2020">20s (2020-2029)</option>
+                </select>
+                <select id="min-rating-filter">
+                    <option value="">Όλες οι βαθμολογίες</option>
+                    <option value="4.5">4.5★ και άνω</option>
+                    <option value="4.0">4.0★ και άνω</option>
+                    <option value="3.5">3.5★ και άνω</option>
+                    <option value="3.0">3.0★ και άνω</option>
+                </select>
+            </div>
+            <!-- Αναζήτηση ηθοποιού/σκηνοθέτη -->
+            <div class="input-row">
+                <input type="text" id="person-search" placeholder="🎭 Ηθοποιός ή σκηνοθέτης..."
+                       onkeydown="if(event.key==='Enter') searchByPerson()">
+                <button onclick="searchByPerson()">Αναζήτηση Ατόμου</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ιστορικό αναζητήσεων -->
+    <div id="search-history-container" class="hidden">
+        <div class="history-label">
+            🕐 Πρόσφατες αναζητήσεις:
+            <button class="clear-history-btn" onclick="clearSearchHistory()">Καθαρισμός</button>
+        </div>
+        <div id="search-history-tags"></div>
+    </div>
+
+    <div id="search-error" class="error-msg"></div>
+
+    <div id="sort-controls" class="hidden input-row" style="margin-top:10px;">
+        <label style="align-self:center; font-size:0.9rem;">Ταξινόμηση:</label>
+        <select id="sort-field">
+            <option value="title">Τίτλος</option>
+            <option value="year">Έτος</option>
+            <option value="avg">Βαθμολογία</option>
+        </select>
+        <select id="sort-dir">
+            <option value="asc">Αύξουσα ↑</option>
+            <option value="desc">Φθίνουσα ↓</option>
+        </select>
+        <button onclick="applySortAndRender()">Εφαρμογή</button>
+    </div>
+
+    <table id="search-results" class="hidden">
+        <thead>
+            <tr>
+                <th>Αφίσα</th>
+                <th>Τίτλος</th>
+                <th>Είδος</th>
+                <th>Έτος</th>
+                <th>Μέση Βαθμολογία</th>
+                <th>Ενέργειες</th>
+            </tr>
+        </thead>
+        <tbody id="search-results-body"></tbody>
+    </table>
+
+    <div id="pagination-controls" class="hidden pagination-row">
+        <button onclick="changePage(-1)">← Προηγούμενη</button>
+        <span id="page-info"></span>
+        <button onclick="changePage(1)">Επόμενη →</button>
+    </div>
+</section>
+
+        <!-- Ιστορικό αναζητήσεων -->
+        <div id="search-history-container" class="hidden">
+            <div class="history-label">
+                🕐 Πρόσφατες αναζητήσεις:
+                <button class="clear-history-btn" onclick="clearSearchHistory()">Καθαρισμός</button>
+            </div>
+            <div id="search-history-tags"></div>
+        </div>
+
+        <div id="search-error" class="error-msg"></div>
+
+        <div id="sort-controls" class="hidden input-row" style="margin-top:10px;">
+            <label style="align-self:center; font-size:0.9rem;">Ταξινόμηση:</label>
+            <select id="sort-field">
+                <option value="title">Τίτλος</option>
+                <option value="year">Έτος</option>
+                <option value="avg">Βαθμολογία</option>
+            </select>
+            <select id="sort-dir">
+                <option value="asc">Αύξουσα ↑</option>
+                <option value="desc">Φθίνουσα ↓</option>
+            </select>
+            <button onclick="applySortAndRender()">Εφαρμογή</button>
+        </div>
+
+        <table id="search-results" class="hidden">
+            <thead>
+                <tr>
+                    <th>Αφίσα</th>
+                    <th>Τίτλος</th>
+                    <th>Είδος</th>
+                    <th>Έτος</th>
+                    <th>Μέση Βαθμολογία</th>
+                    <th>Ενέργειες</th>
+                </tr>
+            </thead>
+            <tbody id="search-results-body"></tbody>
+        </table>
+
+        <div id="pagination-controls" class="hidden pagination-row">
+            <button onclick="changePage(-1)">← Προηγούμενη</button>
+            <span id="page-info"></span>
+            <button onclick="changePage(1)">Επόμενη →</button>
+        </div>
+    </section>
+
+    <!-- ─── SECTION 2: Προσθήκη ─── -->
+    <section id="section-add">
+        <h2>Προσθήκη Νέας Ταινίας</h2>
+        <div class="input-row">
+            <input type="text" id="add-title" placeholder="Τίτλος ταινίας"
+                   onkeydown="if(event.key==='Enter') addMovie()">
+            <input type="text" id="add-genres" placeholder="π.χ. Action|Drama|Comedy"
+                   onkeydown="if(event.key==='Enter') addMovie()">
+            <button onclick="addMovie()">Προσθήκη</button>
+        </div>
+        <div id="add-feedback" class="feedback-msg"></div>
+    </section>
+
+    <!-- ─── SECTION 3: Συστάσεις ─── -->
+    <section id="section-recs">
+        <h2>Προτάσεις Ταινιών</h2>
+        <p class="hint">Βαθμολόγησε τουλάχιστον 2 ταινίες και μετά πάτα το κουμπί.</p>
+
+        <div class="imdb-import">
+            <p class="hint">Έχεις λογαριασμό IMDb; Εισήγαγε τις αξιολογήσεις σου αυτόματα!</p>
+            <div class="input-row">
+                <input type="file" id="imdb-file" accept=".csv">
+                <button onclick="importIMDb()">Εισαγωγή από IMDb</button>
+                <button id="toggle-imdb-btn" class="toggle-imdb-btn hidden" onclick="toggleIMDbRatings()">
+                    🙈 Απόκρυψη IMDb
+                </button>
+            </div>
+            <div id="imdb-feedback" class="feedback-msg"></div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+            <strong>Οι βαθμολογίες σου:</strong>
+            <button id="toggle-ratings-btn" onclick="toggleRatingsList()" style="padding:4px 12px; font-size:0.85rem;">
+                🔼 Απόκρυψη
+            </button>
+        </div>
+        <div id="my-ratings-list"></div>
+<!-- Mood selector -->
+<div class="mood-selector">
+    <p class="hint">Πώς νιώθεις απόψε; Επίλεξε διάθεση για καλύτερες προτάσεις!</p>
+    <div class="mood-grid">
+        <div class="mood-btn" data-mood="" onclick="selectMood(this)">
+            🎬 Όλα
+        </div>
+        <div class="mood-btn" data-mood="Comedy" onclick="selectMood(this)">
+            😂 Να γελάσω
+        </div>
+        <div class="mood-btn" data-mood="Drama" onclick="selectMood(this)">
+            😢 Να συγκινηθώ
+        </div>
+        <div class="mood-btn" data-mood="Thriller|Horror" onclick="selectMood(this)">
+            😱 Να φοβηθώ
+        </div>
+        <div class="mood-btn" data-mood="Action|Adventure" onclick="selectMood(this)">
+            💥 Να興奮θώ
+        </div>
+        <div class="mood-btn" data-mood="Sci-Fi" onclick="selectMood(this)">
+            🚀 Να ταξιδέψω
+        </div>
+        <div class="mood-btn" data-mood="Romance" onclick="selectMood(this)">
+            ❤️ Ρομαντική
+        </div>
+        <div class="mood-btn" data-mood="Documentary" onclick="selectMood(this)">
+            🧠 Να μάθω
+        </div>
+        <div class="mood-btn" data-mood="Animation|Family" onclick="selectMood(this)">
+            🎠 Οικογένεια
+        </div>
+    </div>
+    <div id="mood-selected" class="hint" style="margin-top:8px;"></div>
+</div>
+        <div class="input-row" style="margin-bottom:12px;">
+            <select id="rec-genre">
+                <option value="">Όλα τα genres</option>
+                <option value="Action">Action</option>
+                <option value="Adventure">Adventure</option>
+                <option value="Animation">Animation</option>
+                <option value="Comedy">Comedy</option>
+                <option value="Crime">Crime</option>
+                <option value="Documentary">Documentary</option>
+                <option value="Drama">Drama</option>
+                <option value="Fantasy">Fantasy</option>
+                <option value="Horror">Horror</option>
+                <option value="Mystery">Mystery</option>
+                <option value="Romance">Romance</option>
+                <option value="Sci-Fi">Sci-Fi</option>
+                <option value="Thriller">Thriller</option>
+            </select>
+            <select id="rec-n">
+                <option value="5">5 προτάσεις</option>
+                <option value="10" selected>10 προτάσεις</option>
+                <option value="20">20 προτάσεις</option>
+                <option value="50">50 προτάσεις</option>
+            </select>
+            <input type="number" id="rec-year-from" placeholder="Από έτος" min="1900" max="2025">
+            <input type="number" id="rec-year-to"   placeholder="Έως έτος"  min="1900" max="2025">
+            <button id="rec-btn" onclick="getRecommendations()">Λήψη Προτάσεων</button>
+        </div>
+
+        <div id="rec-error" class="error-msg"></div>
+        <table id="rec-results" class="hidden">
+            <thead>
+                <tr>
+                    <th>Αφίσα</th>
+                    <th>Τίτλος</th>
+                    <th>Είδος</th>
+                    <th>Έτος</th>
+                    <th>Προβλεπόμενη Βαθμολογία</th>
+                    <th>Ενέργειες</th>
+                </tr>
+            </thead>
+            <tbody id="rec-results-body"></tbody>
+        </table>
+    </section>
+
+    <!-- ─── SECTION 4: Watchlist ─── -->
+    <section id="section-watchlist">
+        <h2>📋 Watchlist</h2>
+        <div class="input-row" style="margin-bottom:12px;">
+            <button onclick="exportWatchlist()">⬇️ Export σε CSV</button>
+            <button class="remove-btn" onclick="clearWatchlist()">🗑️ Καθαρισμός</button>
+        </div>
+        <p class="hint">Ταινίες που θέλεις να δεις αργότερα.</p>
+        <div id="watchlist-empty" class="hint">Δεν έχεις προσθέσει ακόμα ταινίες.</div>
+        <table id="watchlist-table" class="hidden">
+            <thead>
+                <tr>
+                    <th>Τίτλος</th>
+                    <th>Είδος</th>
+                    <th>Trailer</th>
+                    <th>Αφαίρεση</th>
+                </tr>
+            </thead>
+            <tbody id="watchlist-body"></tbody>
+        </table>
+    </section>
+
+    <!-- ─── SECTION 5: Στατιστικά ─── -->
+    <section id="section-stats">
+        <h2>📊 Τα Στατιστικά μου</h2>
+        <p class="hint">Βασισμένα στις βαθμολογίες που έχεις εισάγει.</p>
+        <button onclick="showStats()">Ανανέωση Στατιστικών</button>
+        <div id="stats-content" style="margin-top:16px;"></div>
+    </section>
+
+</main>
+
+<script src="index.js"></script>
+</body>
+</html>
+
+<!-- ─── SECTION 6: Κοινωνικά ─── -->
+<section id="section-social">
+    <h2>👥 Κοινωνικά</h2>
+
+    <!-- Κοινές ταινίες με φίλο -->
+    <div style="margin-bottom:24px;">
+        <h3 style="font-size:1.1rem; color:var(--primary); margin-bottom:12px;">
+            🎬 Κοινές Ταινίες με Φίλο
+        </h3>
+        <p class="hint">Βρες ποιες ταινίες έχετε δει και οι δύο και πώς τις βαθμολογήσατε!</p>
+        <div class="input-row">
+            <input type="text" id="friend-username" placeholder="Username φίλου..."
+                   onkeydown="if(event.key==='Enter') compareWithFriend()">
+            <button onclick="compareWithFriend()">🔍 Σύγκριση</button>
+        </div>
+        <div id="compare-error" class="error-msg"></div>
+        <div id="compare-results"></div>
+    </div>
+
+    <!-- Εξαγωγή προφίλ -->
+    <div>
+        <h3 style="font-size:1.1rem; color:var(--primary); margin-bottom:12px;">
+            📸 Εξαγωγή Προφίλ
+        </h3>
+        <p class="hint">Κατέβασε μια εικόνα με τα στατιστικά σου για να τη μοιραστείς!</p>
+        <button onclick="exportProfileImage()">📸 Κατέβασε Προφίλ ως Εικόνα</button>
+        <canvas id="profile-canvas" style="display:none;"></canvas>
+    </div>
+</section>

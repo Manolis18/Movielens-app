@@ -1,0 +1,17 @@
+{
+    "name": "MovieLens Explorer",
+    "short_name": "MovieLens",
+    "description": "Αναζήτηση, βαθμολόγηση και προτάσεις ταινιών",
+    "start_url": "/Movielens-app/frontend/",
+    "display": "standalone",
+    "background_color": "#f4f6f9",
+    "theme_color": "#1a1a2e",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "MvL.ico",
+            "sizes": "any",
+            "type": "image/x-icon"
+        }
+    ]
+}
