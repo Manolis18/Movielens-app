@@ -12,6 +12,7 @@ import secrets
 from scipy.sparse.linalg import svds
 from scipy.sparse import csr_matrix
 import numpy as np
+import httpx
 
 # ─────────────────────────────────────────
 # ΑΡΧΙΚΟΠΟΙΗΣΗ APP
@@ -611,3 +612,65 @@ def compare_with_friend(token: str, friend: str):
         "myAvg":        round(my_avg, 2),
         "friendAvg":    round(friend_avg, 2)
     }
+
+# ─────────────────────────────────────────
+# ENDPOINT: AI Chat
+# POST /movielens/api/chat
+# ─────────────────────────────────────────
+class ChatMessage(BaseModel):
+    role:    str
+    content: str
+
+class ChatRequest(BaseModel):
+    messages:      List[ChatMessage]
+    system:        str = ""
+    top_ratings:   str = ""
+    total_ratings: int = 0
+
+@app.post("/movielens/api/chat")
+async def chat(request: ChatRequest):
+    system_prompt = f"""Είσαι ένας ειδικός βοηθός ταινιών για μια εφαρμογή που βασίζεται στο MovieLens dataset.
+
+Ο χρήστης έχει βαθμολογήσει {request.total_ratings} ταινίες. Οι αγαπημένες του είναι: {request.top_ratings or "δεν υπάρχουν ακόμα"}.
+
+Η βάση δεδομένων περιέχει ~9.742 ταινίες μέχρι το 2018.
+
+Όταν προτείνεις ταινίες:
+1. Πρότεινε 3-5 συγκεκριμένες ταινίες που υπάρχουν στη βάση
+2. Εξήγησε γιατί κάθε ταινία ταιριάζει στο αίτημα
+3. Απάντα στα ελληνικά
+4. Στο τέλος γράψε ΠΑΝΤΑ μια γραμμή ως εξής:
+MOVIES_JSON:[{{"title":"Τίτλος","year":1994}},{{"title":"Άλλη","year":2001}}]
+
+Κράτα τις απαντήσεις σύντομες και φιλικές."""
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="API key not configured")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key":         api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type":      "application/json"
+                },
+                json={
+                    "model":      "claude-sonnet-4-20250514",
+                    "max_tokens": 1000,
+                    "system":     system_prompt,
+                    "messages":   [{"role": m.role, "content": m.content} for m in request.messages]
+                },
+                timeout=30.0
+            )
+            data = response.json()
+            if "content" not in data:
+                raise HTTPException(status_code=500, detail=str(data))
+            return {"status": "success", "text": data["content"][0]["text"]}
+
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
