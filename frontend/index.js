@@ -1179,7 +1179,6 @@ async function importIMDb() {
         showToast("Παρακαλώ επίλεξε αρχείο CSV!", "error");
         return;
     }
-    syncRatingToServer(match.movieId, clamped, true);
 
     const file    = fileInput.files[0];
     const text    = await file.text();
