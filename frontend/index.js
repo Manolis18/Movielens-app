@@ -1335,6 +1335,19 @@ function openAuthModal() {
         }
         return;
     }
+
+    // Επαναφορά σε login mode κάθε φορά που ανοίγει
+    authMode = "login";
+    document.getElementById("auth-title").textContent      = "🔐 Σύνδεση";
+    document.getElementById("auth-submit-btn").textContent = "Σύνδεση";
+    document.getElementById("auth-switch-text").textContent = "Δεν έχεις λογαριασμό;";
+    document.getElementById("auth-switch-btn").textContent  = "Εγγραφή";
+
+    const modal = document.getElementById("auth-modal");
+    modal.classList.remove("hidden");
+    modal.style.display = "flex";
+    document.getElementById("auth-username").focus();
+
     const modal = document.getElementById("auth-modal");
     modal.classList.remove("hidden");
     modal.style.display = "flex";
