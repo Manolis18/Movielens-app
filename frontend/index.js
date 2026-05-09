@@ -1347,11 +1347,6 @@ function openAuthModal() {
     modal.classList.remove("hidden");
     modal.style.display = "flex";
     document.getElementById("auth-username").focus();
-
-    const modal = document.getElementById("auth-modal");
-    modal.classList.remove("hidden");
-    modal.style.display = "flex";
-    document.getElementById("auth-username").focus();
 }
 
 function closeAuthModal() {
