@@ -333,7 +333,10 @@
             </select>
             <input type="number" id="rec-year-from" placeholder="Από έτος" min="1900" max="2025">
             <input type="number" id="rec-year-to"   placeholder="Έως έτος"  min="1900" max="2025">
-            <button id="rec-btn" onclick="getRecommendations()">Λήψη Προτάσεων</button>
+            <button id="rec-btn" onclick="getRecommendations()">Λήψη Προτάσεων</button> <button id="refresh-cache-btn" class="hidden" onclick="refreshCache()" 
+        style="background:#27ae60;">
+    🔄 Ανανέωση Προτάσεων
+</button>
         </div>
 
         <div id="rec-error" class="error-msg"></div>

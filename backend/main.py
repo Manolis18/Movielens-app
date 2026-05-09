@@ -13,6 +13,9 @@ from scipy.sparse.linalg import svds
 from scipy.sparse import csr_matrix
 import numpy as np
 import httpx
+import threading
+import time
+from datetime import datetime, timedelta
 
 # ─────────────────────────────────────────
 # ΑΡΧΙΚΟΠΟΙΗΣΗ APP
@@ -106,6 +109,63 @@ class RecommendationRequest(BaseModel):
     genres: str = ""        # προαιρετικό φίλτρο genre, π.χ. "Action"
     exclude_seen: bool = True  # αποκλεισμός ταινιών που έχει δει ο χρήστης
     n: int = 10             # πόσες προτάσεις θέλουμε
+
+# ─────────────────────────────────────────
+# ENDPOINT: Cached Recommendations
+# GET /movielens/api/user/recommendations?token=xxx&genres=xxx&n=10
+# ─────────────────────────────────────────
+@app.get("/movielens/api/user/recommendations")
+def get_cached_recs(token: str, genres: str = "", n: int = 10):
+    user = verify_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Μη έγκυρο token")
+
+    cached = get_cached_recommendations(user["userId"])
+
+    if cached:
+        # Φιλτράρουμε από cache
+        recs = cached
+        if genres:
+            recs = [r for r in recs if genres.lower() in r["genres"].lower()]
+        return {
+            "status":  "success",
+            "cached":  True,
+            "recommendations": recs[:n]
+        }
+
+    # Αν δεν υπάρχει cache → υπολογισμός σε background
+    threading.Thread(
+        target=compute_recommendations_for_user,
+        args=(user["userId"],),
+        daemon=True
+    ).start()
+
+    return {
+        "status":  "computing",
+        "cached":  False,
+        "recommendations": []
+    }
+
+# ─────────────────────────────────────────
+# ENDPOINT: Manual cache refresh
+# POST /movielens/api/user/refresh-cache
+# ─────────────────────────────────────────
+class RefreshRequest(BaseModel):
+    token: str
+
+@app.post("/movielens/api/user/refresh-cache")
+def refresh_cache(req: RefreshRequest):
+    user = verify_token(req.token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Μη έγκυρο token")
+
+    threading.Thread(
+        target=compute_recommendations_for_user,
+        args=(user["userId"],),
+        daemon=True
+    ).start()
+
+    return {"status": "success", "message": "Ο υπολογισμός ξεκίνησε!"}
 
 @app.post("/movielens/api/recommendations")
 def get_recommendations(request: RecommendationRequest):
@@ -355,10 +415,115 @@ def init_users_table():
             PRIMARY KEY (userId, movieId)
         )
     """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS recommendation_cache (
+        userId    INTEGER PRIMARY KEY,
+        recs      TEXT,
+        updatedAt TEXT
+    )
+""")
     conn.commit()
     conn.close()
 
 init_users_table()
+
+# ─────────────────────────────────────────
+# CACHE HELPERS
+# ─────────────────────────────────────────
+def get_cached_recommendations(user_id: int):
+    """Επιστρέφει cached προτάσεις αν είναι φρέσκες (< 24 ώρες)"""
+    conn   = get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT recs, updatedAt FROM recommendation_cache WHERE userId = ?",
+        (user_id,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return None
+
+    updated_at = datetime.fromisoformat(row["updatedAt"])
+    if datetime.now() - updated_at > timedelta(hours=24):
+        return None  # Παλιό cache
+
+    import json
+    return json.loads(row["recs"])
+
+def save_cached_recommendations(user_id: int, recs: list):
+    """Αποθηκεύει προτάσεις στο cache"""
+    import json
+    conn   = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO recommendation_cache (userId, recs, updatedAt)
+        VALUES (?, ?, ?)
+        ON CONFLICT(userId) DO UPDATE SET recs=excluded.recs, updatedAt=excluded.updatedAt
+    """, (user_id, json.dumps(recs), datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+
+def compute_recommendations_for_user(user_id: int):
+    """Υπολογίζει και αποθηκεύει προτάσεις για έναν χρήστη"""
+    conn   = get_conn()
+    cursor = conn.cursor()
+
+    # Παίρνουμε ratings χρήστη
+    cursor.execute(
+        "SELECT movieId, rating FROM user_ratings WHERE userId = ?",
+        (user_id,)
+    )
+    user_ratings_raw = cursor.fetchall()
+    conn.close()
+
+    if len(user_ratings_raw) < 2:
+        return
+
+    # Φτιάχνουμε RatingItem objects
+    ratings = [RatingItem(movieId=r["movieId"], rating=r["rating"]) for r in user_ratings_raw]
+    request = RecommendationRequest(
+        ratings=ratings,
+        genres="",
+        exclude_seen=True,
+        n=50  # Αποθηκεύουμε 50 για να φιλτράρουμε αργότερα
+    )
+
+    try:
+        result = get_recommendations(request)
+        save_cached_recommendations(user_id, result["recommendations"])
+        print(f"Cache updated for user {user_id}: {len(result['recommendations'])} recs")
+    except Exception as e:
+        print(f"Cache error for user {user_id}: {e}")
+
+# ─────────────────────────────────────────
+# BACKGROUND JOB
+# ─────────────────────────────────────────
+def background_cache_job():
+    """Τρέχει κάθε 6 ώρες και ανανεώνει cache για όλους τους χρήστες"""
+    while True:
+        print(f"[{datetime.now()}] Background job started...")
+        try:
+            conn   = get_conn()
+            cursor = conn.cursor()
+            cursor.execute("SELECT userId FROM users")
+            user_ids = [row["userId"] for row in cursor.fetchall()]
+            conn.close()
+
+            for user_id in user_ids:
+                compute_recommendations_for_user(user_id)
+                time.sleep(1)  # Μικρή παύση μεταξύ χρηστών
+
+            print(f"[{datetime.now()}] Background job completed for {len(user_ids)} users")
+        except Exception as e:
+            print(f"Background job error: {e}")
+
+        time.sleep(6 * 60 * 60)  # Κάθε 6 ώρες
+
+# Εκκίνηση background job σε ξεχωριστό thread
+cache_thread = threading.Thread(target=background_cache_job, daemon=True)
+cache_thread.start()
+print("Background cache job started!")
 
 # ─────────────────────────────────────────
 # ΒΟΗΘΗΤΙΚΕΣ ΣΥΝΑΡΤΗΣΕΙΣ

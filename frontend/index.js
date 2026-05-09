@@ -916,6 +916,72 @@ const genre = selectedMood || document.getElementById("rec-genre").value;
             btn.disabled    = false;
             return;
         }
+        
+        // Αν είναι συνδεδεμένος → χρησιμοποιούμε cached recommendations
+if (authToken) {
+    try {
+        const cachedRes  = await fetch(
+            `${API}/user/recommendations?token=${authToken}&genres=${genre}&n=${n}`
+        );
+        const cachedData = await cachedRes.json();
+
+        if (cachedData.status === "success" && cachedData.recommendations.length > 0) {
+            // Χρησιμοποιούμε cache!
+            let recs = cachedData.recommendations;
+
+            if (recYearFrom || recYearTo) {
+                recs = recs.filter(r => {
+                    const y = extractYear(r.title);
+                    if (!y) return false;
+                    if (recYearFrom && y < recYearFrom) return false;
+                    if (recYearTo   && y > recYearTo)   return false;
+                    return true;
+                });
+            }
+
+            recs = recs.slice(0, n);
+
+            if (recs.length > 0) {
+                tbody.innerHTML = "";
+                for (const rec of recs) {
+                    const year   = extractYear(rec.title) || "—";
+                    const poster = await posterHTML(rec.title);
+                    const tr     = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td>${poster}</td>
+                        <td><span class="clickable-title" onclick="showMovieModal(${rec.movieId}, '${rec.title.replace(/'/g, "\\'")}', '${rec.genres.replace(/'/g, "\\'")}')">
+                            ${rec.title}
+                        </span></td>
+                        <td>${rec.genres}</td>
+                        <td>${year}</td>
+                        <td>${rec.predictedRating} ★</td>
+                        <td>
+                            <div style="display:flex; gap:6px;">
+                                <a class="trailer-link" href="${trailerLink(rec.title)}" target="_blank">▶ Trailer</a>
+                                <button class="watchlist-btn" onclick="addToWatchlist(${rec.movieId}, '${rec.title.replace(/'/g, "\\'")}', '${rec.genres.replace(/'/g, "\\'")}')">+ Watchlist</button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+
+                table.classList.remove("hidden");
+                showToast(`⚡ ${recs.length} προτάσεις από cache!`, "success");
+                btn.textContent = "Λήψη Προτάσεων";
+                btn.disabled    = false;
+
+                // Εμφάνιση κουμπιού refresh
+                document.getElementById("refresh-cache-btn")?.classList.remove("hidden");
+                return;
+            }
+        } else if (cachedData.status === "computing") {
+            showToast("Οι προτάσεις υπολογίζονται... Δοκίμασε σε λίγο!", "info");
+            btn.textContent = "Λήψη Προτάσεων";
+            btn.disabled    = false;
+            return;
+        }
+    } catch { }
+}
 
         tbody.innerHTML = "";
         for (const rec of recs) {
@@ -949,6 +1015,22 @@ const genre = selectedMood || document.getElementById("rec-genre").value;
     } finally {
         btn.textContent = "Λήψη Προτάσεων";
         btn.disabled    = false;
+    }
+}
+
+async function refreshCache() {
+    if (!authToken) return;
+
+    try {
+        await fetch(`${API}/user/refresh-cache`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: authToken })
+        });
+        showToast("Ο υπολογισμός νέων προτάσεων ξεκίνησε! Δοκίμασε σε 1-2 λεπτά.", "info");
+        document.getElementById("refresh-cache-btn")?.classList.add("hidden");
+    } catch (err) {
+        showToast("Σφάλμα ανανέωσης!", "error");
     }
 }
 
