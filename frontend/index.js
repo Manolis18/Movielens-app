@@ -1930,3 +1930,7 @@ if (hasIMDb) document.getElementById("toggle-imdb-btn").classList.remove("hidden
 
 updateAuthUI();
 if (authToken) loadUserDataFromServer();
+
+// Αρχικά κρυμμένες βαθμολογίες
+document.getElementById("my-ratings-list").style.display = "none";
+document.getElementById("toggle-ratings-btn").textContent = "🔽 Εμφάνιση";
