@@ -1447,6 +1447,12 @@ async function loadUserDataFromServer() {
                     fromIMDb: r.fromIMDb === 1
                 };
             }
+
+            // Εμφάνιση κουμπιού απόκρυψης IMDb αν υπάρχουν IMDb ratings
+            const hasIMDb = Object.values(myRatings).some(v => v.fromIMDb);
+            if (hasIMDb) {
+                document.getElementById("toggle-imdb-btn").classList.remove("hidden");
+            }
         }
 
         // Φόρτωση watchlist
@@ -1463,7 +1469,10 @@ async function loadUserDataFromServer() {
         updateRatingsList();
         updateWatchlist();
         showStats();
-        showToast("Τα δεδομένα σου φορτώθηκαν!", "success");
+
+        const total  = Object.keys(myRatings).length;
+        const imdbCount = Object.values(myRatings).filter(v => v.fromIMDb).length;
+        showToast(`Φορτώθηκαν ${total} βαθμολογίες (${imdbCount} από IMDb)!`, "success");
 
     } catch (err) {
         showToast("Σφάλμα φόρτωσης δεδομένων!", "error");
